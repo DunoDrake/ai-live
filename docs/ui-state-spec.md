@@ -105,9 +105,11 @@ A new sequence cancels the old sequence. Responsive SVG rebuild and session swit
 ## 8. Live Trace semantics
 
 - Live Trace is rendered as a standalone balanced panel in the main section between Agent Workflow and Tool Calls.
-- Redundant raw timeline is omitted in favor of the dedicated Tool Calls panel; Live Trace focuses exclusively on the observed workflow graph (Prompt → Tool ⇄ Todo → Reply).
-- Node states reflect live execution (active pulsing highlight, error state, and edge directional indicators).
-
+- Redundant raw timeline is omitted in favor of the dedicated Tool Calls panel; Live Trace focuses exclusively on the fixed observed workflow graph (Prompt → Tool ⇄ Todo → Reply).
+- The graph topology never changes when events arrive. Events only change node and edge presentation.
+- The current stage uses the active pulsing highlight. Every stage observed since the latest Prompt remains at 72% opacity with subtitle `complete`; stages not yet observed remain at 30% opacity.
+- A running Tool or Todo MUST NOT dim an already observed Prompt. Reply becomes active when emitted while all earlier observed stages remain completed.
+- Tool error and recent completion styling apply only to the current Tool stage; directional edge indicators represent stage handoffs.
 ## 9. Responsive contract
 
 | Width | Layout |

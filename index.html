@@ -74,6 +74,10 @@ header.top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-
 .flowsvg text { font-family:inherit; dominant-baseline:middle; fill:var(--text); }
 .flowsvg .node { cursor:pointer; transform-box:fill-box; transform-origin:center; transition:opacity .3s ease; }
 .flowsvg.flowing .node:not(.active) { opacity:.3; }
+.flowsvg.trace-graph .node { opacity:.3; }
+.flowsvg.trace-graph .node.seen:not(.active) { opacity:.72; }
+.flowsvg.trace-graph .node.active { opacity:1; }
+
 .flowsvg .node .card { fill:var(--f); stroke:var(--c); stroke-width:1.4; vector-effect:non-scaling-stroke; transition:fill .3s ease, fill-opacity .3s ease, stroke .3s ease, stroke-width .3s ease, filter .3s ease; }
 .flowsvg .node.inferred .card { stroke-dasharray:5 4; }
 .flowsvg .node:hover .card { stroke-width:2; }
@@ -605,16 +609,26 @@ function traceSvg() {
   return `<svg viewBox="0 -10 600 240" class="flowsvg trace-graph" role="img" aria-label="Observed Live Trace workflow: Prompt, Tool, Todo, Reply."><defs>${marker("traceArrow", "var(--arrow)")}${marker("traceArrowOn", "var(--accent)")}</defs><g class="flow-edges">${edges}${pulses}</g><g class="flow-nodes">${nodes}</g></svg>`;
 }
 
+function traceStageOf(event) {
+  if (!event) return "";
+  if (event.kind === "prompt") return "prompt";
+  if (event.kind === "reply") return "reply";
+  if (event.kind === "todo" || event.kind === "todo-visibility") return "todo";
+  if (event.kind === "tool-start" || event.kind === "tool-end" || event.kind === "tool-error") return "tool";
+  return "";
+}
+
 function latestTraceState(data) {
-  const event = data.trace[data.trace.length - 1];
+  let promptIndex = -1;
+  data.trace.forEach((event, index) => { if (event.kind === "prompt") promptIndex = index; });
+  const turn = data.trace.slice(promptIndex < 0 ? 0 : promptIndex);
+  const observedStages = turn.map(traceStageOf).filter(Boolean);
   const pending = data.pending[0];
-  if (pending) return { stage:pending.tool === "todo" ? "todo" : "tool", event:null, pending };
-  if (!event) return { stage:"", event:null, pending:null };
-  if (event.kind === "prompt") return { stage:"prompt", event, pending:null };
-  if (event.kind === "reply") return { stage:"reply", event, pending:null };
-  if (event.kind === "todo" || event.kind === "todo-visibility") return { stage:"todo", event, pending:null };
-  if (event.kind === "tool-start" || event.kind === "tool-end" || event.kind === "tool-error") return { stage:"tool", event, pending:null };
-  return { stage:"", event, pending:null };
+  const stage = pending ? pending.tool === "todo" ? "todo" : "tool" : observedStages[observedStages.length - 1] || "";
+  const event = pending ? null : turn.slice().reverse().find((item) => traceStageOf(item) === stage) || null;
+  const seen = new Set(observedStages);
+  if (stage) seen.add(stage);
+  return { stage, event, pending, seen };
 }
 
 function traceStageText(stage, state) {
@@ -645,16 +659,17 @@ function updateTraceGraph(data) {
   if (!graph.querySelector("svg")) graph.innerHTML = traceSvg();
   const state = latestTraceState(data), stage = state.stage, svg = graph.querySelector("svg");
   svg.querySelectorAll("[data-trace-stage]").forEach((node) => {
-    const key = node.dataset.traceStage, active = key === stage;
+    const key = node.dataset.traceStage, active = key === stage, seen = state.seen.has(key);
     const kind = active && state.event ? state.event.kind : "";
     const failed = kind === "tool-error", recent = kind === "tool-end";
     const badge = !active ? "" : state.pending ? "RUNNING " + fmtMs(state.pending.ms) : state.event ? (failed ? "FAILED " : recent ? "DONE " : "") + hms(state.event.at) : "";
+    node.classList.toggle("seen", seen);
     node.classList.toggle("active", active);
     node.classList.toggle("failed", failed);
     node.classList.toggle("recent", recent);
     node.classList.toggle("has-badge", !!badge);
     node.querySelector(".badge text").textContent = badge;
-    node.querySelector(".node-subtitle").textContent = active ? traceStageText(key, state) : TRACE_NODES[key].idle;
+    node.querySelector(".node-subtitle").textContent = active ? traceStageText(key, state) : seen ? "complete" : TRACE_NODES[key].idle;
   });
   if (stage && stage !== previousTraceStage) {
     lastTraceEdge = traceEdgeFor(stage, previousTraceStage);

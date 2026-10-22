@@ -18,10 +18,10 @@ From this directory:
 # or: ./start.sh 4874
 ```
 
-Or directly from repository root:
+Or directly from the repository root:
 
 ```bash
-node scripts/claude-live/server.mjs
+node server.mjs
 ```
 
 Open:
@@ -33,7 +33,7 @@ http://127.0.0.1:4873/
 Alternate session roots or port:
 
 ```bash
-OMP_SESSIONS_DIR=/absolute/omp/root CLAUDE_CODE_SESSIONS_DIR=/absolute/claude/root PORT=4874 node scripts/claude-live/server.mjs
+OMP_SESSIONS_DIR=/absolute/omp/root CLAUDE_CODE_SESSIONS_DIR=/absolute/claude/root PORT=4874 node server.mjs
 ```
 
 Do not bind or proxy this service to a remote interface without first adding authentication and secret redaction.

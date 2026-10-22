@@ -1,11 +1,10 @@
 # AI Live documentation
 
-Canonical specifications for the local session monitor in `scripts/claude-live/`, a fork of
-`scripts/omp-live/` extended to read both OMP and Claude Code transcripts. Display name is
-"AI Live"; the documents below still describe the OMP-only design this fork started from
-except where noted.
+Canonical specifications for AI Live, a standalone local monitor for OMP and Claude Code transcripts.
+The implementation uses independent parsers for each transcript format while presenting both through one dashboard.
 
-## Claude Code support (this fork only)
+
+## Transcript support
 
 - `server.mjs` reads a second root, `~/.claude/projects/**/*.jsonl` (override with
   `CLAUDE_CODE_SESSIONS_DIR`), alongside the original OMP root (`OMP_SESSIONS_DIR`).
@@ -20,7 +19,7 @@ except where noted.
 
 1. `server.mjs` and `index.html` are authoritative for implemented behavior.
 2. Files in this directory define the intended current contract for future changes.
-3. Repository files under `docs/sessions/omp-live-*.md` are historical implementation evidence. They are not current specifications when they conflict with this directory or source code.
+3. Historical implementation notes outside this repository are not part of the current specification.
 
 ## Documents
 
@@ -45,9 +44,10 @@ A model continuing implementation SHOULD read:
 ## Current status
 
 - Implementation: one dependency-free Node server plus one standalone HTML document.
-- Data source: local OMP JSONL sessions only.
+- Data sources: local OMP and Claude Code JSONL sessions.
 - Network binding: loopback only, default port `4873`.
 - UI language: English; guide explanations include Vietnamese comparison notes.
 - Current visual system: compact Flora/Archify-inspired monitor, dark/light themes.
-- Current open product checks: user visual acceptance; ambient workflow effects remain deferred.
+- Current open product check: user visual acceptance; ambient workflow effects remain deferred.
+- Publication does not change the local-only runtime security boundary.
 - No commit or deployment contract is defined here.

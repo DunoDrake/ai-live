@@ -1,22 +1,22 @@
-# OMP Live decision history
+# AI Live decision history
 
-This file prevents later models from reviving superseded designs or treating historical session notes as current requirements.
+This file records durable design decisions and prevents superseded experiments from being restored without explicit direction.
 
 ## Current decisions
 
 | Decision | Rationale | Evidence |
 |---|---|---|
-| Read local OMP JSONL only | Keep the monitor dependency-free, local and truthful | `server.mjs`; `_handoff-checkpoint.md` |
+| Read local OMP and Claude Code JSONL | Keep the monitor dependency-free, local and truthful | `server.mjs` |
 | Bind to loopback | No authentication or redaction exists | `server.mjs` |
-| Compact monitor layout | Operational state must stay above the fold | `omp-live-monitor-redesign.md` |
-| Five-node workflow | Context → Model, Model↔Tool, Model↔Verify, Verify→Output communicates loops without inventing Tool→Verify | `omp-live-card-workflow.md` |
-| Label Context/Model inferred and Verify schematic | OMP JSONL does not expose those internal stages as events | `omp-live-context-workflow.md` |
-| Keep workflow SVG mounted | Polling replacement reset visual continuity | `omp-live-smooth-workflow.md` |
-| Event-triggered handoff pulses only | Motion should communicate state, not run as decoration | monitor redesign addenda |
-| Flora visual skin | Lime accent, compact panels and theme-aware semantic colors | monitor redesign addendum |
-| Process Guides are educational overlays | Source diagrams explain concepts; they are not runtime telemetry | monitor redesign Process Guides addendum |
-| Mobile guide diagram scrolls internally | Preserves authored graph readability without page overflow | current `index.html` |
-| Live Trace uses observed JSONL only | Exact runtime history is more useful than coloring unavailable internal stages; Context/reasoning/Verify remain absent | `server.mjs`, Live Trace implementation session |
+| Compact monitor layout | Operational state must stay above the fold | `index.html` |
+| Five-node Agent Workflow | Context → Model, Model↔Tool, Model↔Verify, Verify→Output communicates loops without inventing Tool→Verify | `index.html` |
+| Label Context/Model inferred and Verify schematic | Transcript JSONL does not expose those internal stages as exact runtime events | `index.html`, `docs/ui-state-spec.md` |
+| Keep workflow SVG mounted | Polling replacement resets visual continuity | `index.html` |
+| Event-triggered handoff pulses only | Motion should communicate state, not run as decoration | `docs/ui-state-spec.md` |
+| Flora visual skin | Lime accent, compact panels and theme-aware semantic colors | `index.html` |
+| Process Guides are educational overlays | Source diagrams explain concepts; they are not runtime telemetry | `docs/product-spec.md` |
+| Mobile guide diagram scrolls internally | Preserves authored graph readability without page overflow | `index.html` |
+| Live Trace uses observed JSONL only | Exact runtime state is more useful than coloring unavailable internal stages | `server.mjs`, `docs/ui-state-spec.md` |
 
 ## Superseded layouts
 
@@ -24,19 +24,19 @@ This file prevents later models from reviving superseded designs or treating his
 
 Historical design placed a compact workflow beside a detail panel on desktop. Current layout still preserves persistent collapsible detail, but the exact earlier geometry is superseded by the five-card workflow and current monitor grid.
 
-Evidence: `docs/sessions/omp-live-context-workflow.md`.
+The current layout remains authoritative in `index.html`.
 
 ### Tall workflow cards
 
 The former 190×110 cards with labels beneath icons were replaced by 150×64 cards with icon and title in one row.
 
-Evidence: `docs/sessions/omp-live-card-workflow.md`.
+The current compact card geometry is authoritative in `index.html`.
 
 ### Landing-page monitor
 
 Large hero metrics and unbounded page content were replaced by a compact status strip, bounded panels and one-screen desktop grid.
 
-Evidence: `docs/sessions/omp-live-monitor-redesign.md`.
+The current bounded dashboard grid is authoritative in `index.html`.
 
 ## Removed or rejected experiments
 
@@ -53,34 +53,20 @@ Do not restore these without an explicit new user direction:
 
 The user rejected the visual direction and deferred ambient work. The only retained repair from the final experiment was unclipped active-node glow: `.flowsvg { overflow: visible }` and glow on the larger halo.
 
-Evidence:
-
-- `docs/sessions/omp-live-living-circuit.md`
-- `docs/sessions/omp-live-safe-workflow-motion.md`
+These experiments remain rejected unless a new product decision supersedes this record.
 
 ## Deliberately absent features
 
-- Claude Code session reader: explicitly declined in OMP Live. Reversed in this fork
-  (`scripts/claude-live/`, renamed "AI Live") on 2026-10-22, at user request, as a second
-  independent parser reading `~/.claude/projects/**/*.jsonl` alongside the OMP parser.
-  `scripts/omp-live/` itself is untouched.
+- OMP and Claude Code use independent parsers because their transcript shapes differ. Both are supported by the standalone AI Live server.
 - 9router API access: unnecessary; local JSONL is authoritative.
 - Live Context assembly events: unavailable.
 - Live Verify/hook/approval events: unavailable.
 - Persistent analytics database: not requested.
 - Remote hosting/authentication: not designed.
 
-## Historical evidence map
+## Historical evidence
 
-| File | Use |
-|---|---|
-| `docs/sessions/omp-live-monitor-redesign.md` | Main monitor redesign, Flora skin, workflow motion, Process Guides and verification evidence |
-| `docs/sessions/omp-live-card-workflow.md` | Current workflow topology and non-crossing responsive routes |
-| `docs/sessions/omp-live-context-workflow.md` | Telemetry truth labels, Context illustration and detail-panel behavior |
-| `docs/sessions/omp-live-smooth-workflow.md` | Stable DOM/SVG lifecycle across polling |
-| `docs/sessions/omp-live-living-circuit.md` | Ambient rollback |
-| `docs/sessions/omp-live-safe-workflow-motion.md` | Rejected motion set and retained clipping fix |
-| `docs/sessions/_handoff-checkpoint.md` | Temporary operator handoff; may contain mock/export notes, not canonical behavior |
+Pre-publication implementation notes were intentionally excluded because they referenced private workspace paths. Source and canonical documents in this repository are the complete public authority.
 
 ## Open decisions
 
