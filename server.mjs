@@ -27,7 +27,7 @@ function newState(file, source) {
 		file, source, offset: 0, remainder: "",
 		id: "", title: "", cwd: "", model: "", thinking: "", startedAt: "", lastAt: 0,
 		ended: false, userCount: 0, assistantTurns: 0, lastUser: "", lastAssistant: "",
-		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 },
+		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, pricedTurns: 0, unpricedTurns: 0 },
 		context: null, compactions: 0, toolCounts: {}, pending: {},
 		todo: null, todoVisibility: "", tasks: {}, errors: 0, seenResponses: new Set(),
 		events: [], eventIds: new Set(), calls: {}, lastRole: "",
@@ -101,7 +101,9 @@ function applyAssistant(state, entry) {
 		state.usage.output += usage.output || 0;
 		state.usage.cacheRead += usage.cacheRead || 0;
 		state.usage.cacheWrite += usage.cacheWrite || 0;
-		state.usage.cost += (usage.cost && usage.cost.total) || 0;
+		const loggedCost = usage.cost && Number(usage.cost.total);
+		if (loggedCost > 0) { state.usage.cost += loggedCost; state.usage.pricedTurns += 1; }
+		else if ((usage.input || 0) + (usage.output || 0) + (usage.cacheRead || 0) + (usage.cacheWrite || 0) > 0) state.usage.unpricedTurns += 1;
 	}
 	if (message.contextSnapshot) state.context = message.contextSnapshot.promptTokens;
 	const text = clip(textOf(message.content), 600);
@@ -228,6 +230,7 @@ function ccApplyAssistant(state, entry) {
 		state.usage.output += usage.output_tokens || 0;
 		state.usage.cacheRead += usage.cache_read_input_tokens || 0;
 		state.usage.cacheWrite += usage.cache_creation_input_tokens || 0;
+		if ((usage.input_tokens || 0) + (usage.output_tokens || 0) + (usage.cache_read_input_tokens || 0) + (usage.cache_creation_input_tokens || 0) > 0) state.usage.unpricedTurns += 1;
 	}
 	const parts = Array.isArray(message.content) ? message.content : [];
 	const calls = parts.filter((part) => part.type === "tool_use");

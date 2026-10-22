@@ -20,7 +20,8 @@ The product is for an operator supervising local agent work. It is not an agent 
 3. **Local by default.** The HTTP server MUST bind to `127.0.0.1`; no authentication is assumed.
 4. **Monitor, not landing page.** At desktop sizes, current state and recent activity SHOULD fit in one viewport with bounded panel scrolling.
 5. **Motion communicates state.** Animation SHOULD indicate active work or a handoff. Decorative ambient effects are not part of the current product.
-6. **Degrade honestly.** Missing context, model, usage, todo or plan data appears as absent/unknown; the UI MUST NOT fabricate it.
+6. **Cost is logged, never estimated.** The dashboard MUST sum only positive prices present in transcript usage records and MUST disclose replies that contain usage but no logged price.
+7. **Degrade honestly.** Missing context, model, usage, todo or plan data appears as absent/unknown; the UI MUST NOT fabricate it.
 
 ## 3. Primary user tasks
 

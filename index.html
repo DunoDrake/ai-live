@@ -77,6 +77,8 @@ header.top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-
 .flowsvg.trace-graph .node { opacity:.3; }
 .flowsvg.trace-graph .node.seen:not(.active) { opacity:.72; }
 .flowsvg.trace-graph .node.active { opacity:1; }
+.flowsvg.trace-graph .node.recent,.flowsvg.trace-graph .node.failed { opacity:1; animation:none; }
+.flowsvg.trace-graph .node.recent .halo,.flowsvg.trace-graph .node.failed .halo { opacity:0; animation-play-state:paused; }
 
 .flowsvg .node .card { fill:var(--f); stroke:var(--c); stroke-width:1.4; vector-effect:non-scaling-stroke; transition:fill .3s ease, fill-opacity .3s ease, stroke .3s ease, stroke-width .3s ease, filter .3s ease; }
 .flowsvg .node.inferred .card { stroke-dasharray:5 4; }
@@ -450,6 +452,8 @@ function renderWorkflow(data) {
   tool.classList.toggle("has-badge", !!badge);
   tool.querySelector(".badge text").textContent = badge;
   tool.querySelector(".node-subtitle").textContent = running ? "RUNNING NOW" : "observed calls";
+  const model = svg.querySelector(".t-model");
+  model.querySelector(".node-subtitle").textContent = station === "model" ? "INFERRED NOW" : "activity inferred";
 }
 
 let workflowMobile = null;
@@ -546,7 +550,8 @@ function setStrip(data) {
     setSlot("sNow", cellHtml("Now", `<span class="mut">${text}</span>`, "", "sm clip"));
   }
   setSlot("sCtx", cellHtml("Context", data.context == null ? "—" : fmtNum(data.context), data.compactions ? "compacted " + data.compactions + "×" : "no compaction"));
-  setSlot("sCost", cellHtml("Cost", "$" + u.cost.toFixed(2), "in " + fmtNum(u.input) + " · out " + fmtNum(u.output)));
+  const costNote = u.unpricedTurns ? u.unpricedTurns + " unpriced" : u.pricedTurns + " priced";
+  setSlot("sCost", cellHtml("Logged cost", "$" + u.cost.toFixed(2), costNote));
   setSlot("sTurns", cellHtml("Prompts · replies", data.userCount + " · " + data.assistantTurns, ""));
   setSlot("sErr", cellHtml("Tool errors", `<span class="${data.errors ? "err" : ""}">${data.errors}</span>`, ""));
   setSlot("sModel", cellHtml("Model", esc(cut((data.model || "").split("/").pop(), 28)), esc(data.thinking || ""), "sm clip"));
@@ -659,17 +664,18 @@ function updateTraceGraph(data) {
   if (!graph.querySelector("svg")) graph.innerHTML = traceSvg();
   const state = latestTraceState(data), stage = state.stage, svg = graph.querySelector("svg");
   svg.querySelectorAll("[data-trace-stage]").forEach((node) => {
-    const key = node.dataset.traceStage, active = key === stage, seen = state.seen.has(key);
-    const kind = active && state.event ? state.event.kind : "";
+    const key = node.dataset.traceStage, current = key === stage, seen = state.seen.has(key);
+    const kind = current && state.event ? state.event.kind : "";
     const failed = kind === "tool-error", recent = kind === "tool-end";
-    const badge = !active ? "" : state.pending ? "RUNNING " + fmtMs(state.pending.ms) : state.event ? (failed ? "FAILED " : recent ? "DONE " : "") + hms(state.event.at) : "";
+    const active = current && !failed && !recent;
+    const badge = !current ? "" : state.pending ? "RUNNING " + fmtMs(state.pending.ms) : state.event ? (failed ? "FAILED " : recent ? "DONE " : "") + hms(state.event.at) : "";
     node.classList.toggle("seen", seen);
     node.classList.toggle("active", active);
     node.classList.toggle("failed", failed);
     node.classList.toggle("recent", recent);
     node.classList.toggle("has-badge", !!badge);
     node.querySelector(".badge text").textContent = badge;
-    node.querySelector(".node-subtitle").textContent = active ? traceStageText(key, state) : seen ? "complete" : TRACE_NODES[key].idle;
+    node.querySelector(".node-subtitle").textContent = current ? traceStageText(key, state) : seen ? "complete" : TRACE_NODES[key].idle;
   });
   if (stage && stage !== previousTraceStage) {
     lastTraceEdge = traceEdgeFor(stage, previousTraceStage);
@@ -706,7 +712,8 @@ function setInfo(data) {
   const tools = Object.entries(data.toolCounts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => `<span>${esc(name)} ${count}</span>`).join("");
   const plans = data.plans.map((p) => { const t = p.done + p.pending + p.blocked, pct = t ? Math.round(p.done * 100 / t) : 0;
     return `<div class="planname"><span class="clip">${esc(p.name)}</span><span>${p.done}/${t}</span></div><div class="bar"><i style="width:${pct}%"></i></div>`; }).join("");
-  setSlot("info", `<div class="kv"><div>Tokens</div><div>in ${fmtNum(u.input)} · out ${fmtNum(u.output)}</div><div>Cache</div><div>read ${fmtNum(u.cacheRead)} · write ${fmtNum(u.cacheWrite)}</div><div>Started</div><div>${data.startedAt ? esc(hms(Date.parse(data.startedAt))) : "—"}</div><div>Cost</div><div>$${u.cost.toFixed(2)} <span class="dim">(as logged by OMP)</span></div></div>${tools ? `<div class="chips">${tools}</div>` : ""}${plans}`);
+  const costStatus = u.unpricedTurns ? `${u.unpricedTurns} replies have usage but no logged price` : `${u.pricedTurns} priced replies`;
+  setSlot("info", `<div class="kv"><div>Tokens</div><div>in ${fmtNum(u.input)} · out ${fmtNum(u.output)}</div><div>Cache</div><div>read ${fmtNum(u.cacheRead)} · write ${fmtNum(u.cacheWrite)}</div><div>Started</div><div>${data.startedAt ? esc(hms(Date.parse(data.startedAt))) : "—"}</div><div>Logged cost</div><div>$${u.cost.toFixed(2)} <span class="dim">(${esc(costStatus)})</span></div></div>${tools ? `<div class="chips">${tools}</div>` : ""}${plans}`);
 }
 
 const SOURCE_LABEL = { omp: "OMP", "claude-code": "Claude Code" };

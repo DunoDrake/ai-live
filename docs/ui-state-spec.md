@@ -74,6 +74,7 @@ When the session is not working, no node is active.
 - Pending tool: accent card, `RUNNING <duration>` badge, live Model→Tool edge.
 - Recent result (<3 seconds): success or failure card/badge without claiming Running.
 - Tool subtitle changes to `RUNNING NOW` only while pending.
+- When Model is active without a direct model-running event, its subtitle MUST read `INFERRED NOW`; the dashed inferred styling remains visible.
 
 ### Handoffs
 
@@ -107,9 +108,11 @@ A new sequence cancels the old sequence. Responsive SVG rebuild and session swit
 - Live Trace is rendered as a standalone balanced panel in the main section between Agent Workflow and Tool Calls.
 - Redundant raw timeline is omitted in favor of the dedicated Tool Calls panel; Live Trace focuses exclusively on the fixed observed workflow graph (Prompt → Tool ⇄ Todo → Reply).
 - The graph topology never changes when events arrive. Events only change node and edge presentation.
-- The current stage uses the active pulsing highlight. Every stage observed since the latest Prompt remains at 72% opacity with subtitle `complete`; stages not yet observed remain at 30% opacity.
+- Prompt, pending Tool/Todo, and Reply use the active pulsing highlight. Every stage observed since the latest Prompt remains at 72% opacity with subtitle `complete`; stages not yet observed remain at 30% opacity.
 - A running Tool or Todo MUST NOT dim an already observed Prompt. Reply becomes active when emitted while all earlier observed stages remain completed.
-- Tool error and recent completion styling apply only to the current Tool stage; directional edge indicators represent stage handoffs.
+- A `tool-end` or `tool-error` event is the last observed stage, not a running stage: Tool uses a full-opacity static `DONE`/`FAILED` result highlight with no breathe or halo animation.
+- Agent Workflow MAY simultaneously highlight `Model · INFERRED NOW` after a tool result because it predicts the current processing stage, while Live Trace truthfully retains Tool as the last observed event.
+- Directional edge indicators represent observed stage handoffs.
 ## 9. Responsive contract
 
 | Width | Layout |
