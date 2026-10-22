@@ -1,0 +1,1030 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Live</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#050a14">
+<script>document.documentElement.dataset.theme=(function(){try{var t=localStorage.getItem("ai-live-theme");if(t)return t}catch(e){}return window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root { --bg:#f8fafc; --grid:#e2e8f0; --text:#0f172a; --muted:#64748b; --dim:#64748b; --panel:#ffffff; --pb:#e2e8f0; --arrow:#94a3b8; --row:#f1f5f9;
+  --frontend-fill:rgba(34,211,238,.15); --frontend-stroke:#0891b2; --backend-fill:rgba(52,211,153,.18); --backend-stroke:#059669;
+  --database-fill:rgba(167,139,250,.2); --database-stroke:#7c3aed; --cloud-fill:rgba(251,191,36,.18); --cloud-stroke:#d97706;
+  --security-fill:rgba(251,113,133,.15); --security-stroke:#e11d48; --external-fill:rgba(100,116,139,.12); --external-stroke:#64748b;
+  --ok:#059669; --run:#0891b2; --err:#e11d48; --accent:#4d7c0f; --accent-text:#ffffff; color-scheme:light; }
+[data-theme="dark"] { --bg:#050a14; --grid:#12203a; --text:#e6efe0; --muted:#8a9aa6; --dim:#7a8a96; --panel:rgba(10,18,32,.72); --pb:rgba(190,255,120,.16); --arrow:#4b5b6b; --row:rgba(190,255,120,.045);
+  --frontend-fill:rgba(8,51,68,.4); --frontend-stroke:#22d3ee; --backend-fill:rgba(6,78,59,.4); --backend-stroke:#34d399;
+  --database-fill:rgba(76,29,149,.4); --database-stroke:#a78bfa; --cloud-fill:rgba(120,53,15,.3); --cloud-stroke:#fbbf24;
+  --security-fill:rgba(136,19,55,.4); --security-stroke:#fb7185; --external-fill:rgba(30,41,59,.5); --external-stroke:#94a3b8;
+  --ok:#b6ff6a; --run:#7dd3fc; --err:#fb7185; --accent:#b6ff6a; --accent-text:#0a1400; color-scheme:dark; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html { font-size:16px; -webkit-font-smoothing:antialiased; }
+body { font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,'DejaVu Sans Mono',monospace; font-size:13px; line-height:1.45; color:var(--text); background-color:var(--bg);
+  background-image:linear-gradient(color-mix(in srgb,var(--grid) 55%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--grid) 55%,transparent) 1px,transparent 1px);
+  background-size:32px 32px; background-position:-1px -1px; background-attachment:fixed; }
+[data-theme="dark"] body { background-image:radial-gradient(1200px 600px at 78% -10%,rgba(40,80,190,.38),transparent 60%),radial-gradient(800px 500px at 10% 110%,rgba(20,50,130,.35),transparent 60%),linear-gradient(color-mix(in srgb,var(--grid) 30%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--grid) 30%,transparent) 1px,transparent 1px); background-size:auto,auto,32px 32px,32px 32px; background-repeat:no-repeat,no-repeat,repeat,repeat; }
+button { font:inherit; color:inherit; background:none; border:none; cursor:pointer; }
+ul { list-style:none; }
+:focus-visible { outline:2px solid var(--frontend-stroke); outline-offset:2px; }
+.mut { color:var(--muted); } .dim { color:var(--dim); } .err { color:var(--err); } .clip { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+@keyframes pulse { 50% { opacity:.35; } }
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes pop { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+
+.app { min-height:100vh; display:grid; grid-template-rows:auto auto minmax(420px,1fr) auto; gap:12px; padding:12px 16px; max-width:1920px; margin-inline:auto; }
+.panel { background:var(--panel); border:1px solid var(--pb); border-left:2px solid var(--accent); border-radius:3px; backdrop-filter:blur(12px); min-width:0; min-height:0; display:flex; flex-direction:column; }
+.hd { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:9px 12px; border-bottom:1px solid var(--pb); font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); flex:none; }
+.hd em { font-style:normal; text-transform:none; letter-spacing:0; color:var(--run); }
+.hd span::before { content:""; display:inline-block; width:2px; height:10px; background:var(--accent); margin-right:8px; vertical-align:-1px; }
+.bd { padding:12px; overflow:auto; min-height:0; flex:1 1 auto; }
+
+header.top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:16px; min-height:40px; }
+.brand { display:flex; align-items:center; gap:8px; font-weight:700; letter-spacing:-.01em; font-size:15px; }
+.brand svg { width:16px; height:16px; fill:var(--accent); }
+.ttl { min-width:0; text-align:center; }
+.ttl h1 { font-size:13px; font-weight:600; }
+.ttl p { font-size:11px; color:var(--muted); }
+.hr { display:flex; align-items:center; gap:10px; }
+.clock { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.clock b { color:var(--text); font-weight:600; }
+.tbtn { border:1px solid var(--pb); background:var(--panel); border-radius:3px; padding:5px 10px; font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; white-space:nowrap; }
+.tbtn:hover { border-color:var(--arrow); }
+
+.strip { display:grid; grid-template-columns:auto minmax(280px,1fr) repeat(4,auto) minmax(150px,auto); }
+.cell { display:flex; flex-direction:column; gap:1px; padding:8px 14px; border-left:1px solid var(--pb); min-width:0; }
+.cell:first-child { border-left:0; }
+.cell.c-now, .cell.c-model { min-width:0; }
+.cell .k { font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+.cell .v { font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; line-height:1.3; }
+.cell .v.sm { font-size:13px; font-weight:500; line-height:1.55; }
+.cell .s { font-size:11px; color:var(--dim); min-height:1.45em; }
+.v b.tool { color:var(--run); font-weight:600; }
+.dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; background:var(--dim); vertical-align:1px; flex:none; }
+.dot.w { background:var(--ok); box-shadow:0 0 8px var(--ok); animation:pulse 1.4s ease-in-out infinite; }
+.dot.i { background:var(--cloud-stroke); } .dot.e { background:var(--dim); } .dot.a { background:var(--run); }
+
+.main { display:grid; gap:12px; grid-template-columns:minmax(0,1fr); min-height:0; }
+.col { min-height:0; }
+#flow { min-width:0; flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow:hidden; min-height:0; }
+.flowcol .bd { display:flex; flex-direction:column; min-height:0; overflow-y:auto; }
+.flowsvg { width:100%; max-width:100%; max-height:100%; height:auto; display:block; margin-inline:auto; overflow:visible; }
+.flowsvg text { font-family:inherit; dominant-baseline:middle; fill:var(--text); }
+.flowsvg .node { cursor:pointer; transform-box:fill-box; transform-origin:center; transition:opacity .3s ease; }
+.flowsvg.flowing .node:not(.active) { opacity:.3; }
+.flowsvg .node .card { fill:var(--f); stroke:var(--c); stroke-width:1.4; vector-effect:non-scaling-stroke; transition:fill .3s ease, fill-opacity .3s ease, stroke .3s ease, stroke-width .3s ease, filter .3s ease; }
+.flowsvg .node.inferred .card { stroke-dasharray:5 4; }
+.flowsvg .node:hover .card { stroke-width:2; }
+.flowsvg { --workflow-beat:1.6s; --handoff-duration:2.6s; --workflow-ease:cubic-bezier(.45,0,.55,1); }
+.flowsvg .node.active { animation:node-breathe var(--workflow-beat) var(--workflow-ease) infinite; }
+.flowsvg .node.active .card { fill:var(--accent); fill-opacity:.14; stroke:var(--accent); stroke-width:5; }
+.flowsvg .node .halo { fill:none; stroke:var(--accent); stroke-width:2.5; stroke-dasharray:9 7; animation:halo-run var(--workflow-beat) var(--workflow-ease) infinite paused; opacity:0; transition:opacity .3s ease; filter:drop-shadow(0 0 8px var(--accent)); }
+.flowsvg .node.active .halo { opacity:1; animation-play-state:running; }
+.flowsvg .node .badge { opacity:0; transition:opacity .3s ease; }
+.flowsvg .node.has-badge .badge { opacity:1; }
+.flowsvg .node .badge rect { fill:var(--accent); }
+.flowsvg .node .badge text { fill:var(--accent-text); font-size:11px; font-weight:700; text-anchor:middle; }
+.flowsvg .node.recent .card { stroke:var(--ok); stroke-width:4; fill:var(--ok); fill-opacity:.16; }
+.flowsvg .node.recent .badge rect { fill:var(--ok); }
+.flowsvg .node.failed .card { stroke:var(--err); fill:var(--err); fill-opacity:.16; }
+.flowsvg .node.failed .badge rect { fill:var(--err); }
+@keyframes node-breathe { 0%,100% { transform:scale(1); } 50% { transform:scale(1.055); } }
+@keyframes halo-run { 0%,100% { stroke-dashoffset:0; } 50% { stroke-dashoffset:-16; } }
+.flowsvg .node-title { font-size:15px; font-weight:600; }
+.flowsvg .node-subtitle { font-size:10px; fill:var(--muted); }
+.flowsvg .node-icon { fill:none; stroke:var(--c); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+.t-context { --c:var(--database-stroke); --f:var(--database-fill); } .t-model { --c:var(--backend-stroke); --f:var(--backend-fill); }
+.t-tool { --c:var(--frontend-stroke); --f:var(--frontend-fill); } .t-verify { --c:var(--cloud-stroke); --f:var(--cloud-fill); }
+.t-output { --c:var(--external-stroke); --f:var(--external-fill); }
+.flowsvg .edge { fill:none; stroke:var(--arrow); stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; marker-end:url(#arr); transition:stroke .3s ease; }
+.flowsvg .edge.inferred { stroke-dasharray:5 4; }
+.flowsvg .edge.live { stroke:var(--accent); marker-end:url(#arrLive); }
+.flowsvg .handoff-pulse { fill:none; stroke:var(--accent); stroke-width:7; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:14 86; vector-effect:non-scaling-stroke; opacity:0; pointer-events:none; }
+.flowsvg .handoff-pulse.inferred { stroke-width:4; stroke-dasharray:7 10; }
+.flowsvg .handoff-pulse.playing { animation:handoff-streak var(--handoff-duration) var(--workflow-ease) 2; }
+@keyframes handoff-streak { 0% { opacity:0; stroke-dashoffset:100; filter:drop-shadow(0 0 3px var(--accent)); } 15% { opacity:1; } 50% { opacity:1; filter:drop-shadow(0 0 12px var(--accent)); } 85% { opacity:1; } 100% { opacity:0; stroke-dashoffset:0; filter:drop-shadow(0 0 3px var(--accent)); } }
+#arr path { fill:var(--arrow); } #arrLive path { fill:var(--accent); }
+.flow-caption { display:flex; flex-wrap:wrap; gap:4px 18px; justify-content:center; margin-top:6px; font-size:11px; color:var(--muted); }
+.flow-caption i { display:inline-block; width:22px; height:0; border-top:2px solid var(--muted); vertical-align:middle; margin-right:6px; }
+.flow-caption i.d { border-top-style:dashed; }
+
+.detail-panel { margin-top:12px; border:1px solid var(--pb); border-radius:5px; padding:10px 12px; min-width:0; background:var(--row); }
+.detail-top { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.detail-top h3 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:500; }
+.detail-toggle { color:var(--run); font-size:12px; white-space:nowrap; }
+.detail-summary { color:var(--muted); font-size:12px; margin-top:4px; overflow-wrap:anywhere; }
+.detail-panel:not(.collapsed) .detail-summary, .detail-panel.collapsed .stage-detail { display:none; }
+.detail-panel .stage-detail { padding-top:8px; max-height:210px; overflow-y:auto; }
+.stage-detail h3 { font-size:13px; margin-bottom:4px; }
+.stage-detail p, .stage-detail small { font-size:11.5px; color:var(--muted); line-height:1.45; }
+.stage-detail ol { list-style:none; display:grid; gap:6px; margin-top:10px; counter-reset:step; }
+.stage-detail li { counter-increment:step; position:relative; padding:6px 8px 6px 30px; background:var(--panel); border:1px solid var(--pb); border-radius:4px; font-size:12px; }
+.stage-detail li::before { content:counter(step); position:absolute; left:10px; color:var(--database-stroke); font-weight:700; }
+.stage-detail strong, .stage-detail small { display:block; }
+.stage-detail li.simulated { border-color:var(--database-stroke); box-shadow:0 0 10px color-mix(in srgb,var(--database-stroke) 40%,transparent); }
+.stage-detail .detail-status { color:var(--run); }
+.stage-detail .detail-actions { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+.stage-detail button { color:var(--run); font-size:12px; text-decoration:underline; }
+
+.filters { display:flex; gap:6px; flex-wrap:wrap; padding:8px 12px; border-bottom:1px solid var(--pb); flex:none; }
+.fbtn { border:1px solid var(--pb); border-radius:999px; padding:3px 10px; font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+.fbtn[aria-pressed="true"] { color:var(--accent-text); border-color:var(--accent); background:var(--accent); font-weight:600; }
+.fbtn b { font-weight:600; margin-left:4px; color:var(--text); } .fbtn.bad b { color:var(--err); } .fbtn[aria-pressed="true"] b { color:inherit; }
+.rows { padding:4px 0; overflow:auto; min-height:0; flex:1 1 auto; }
+.row { position:relative; display:grid; grid-template-columns:16px 62px 74px minmax(0,1fr) 54px; gap:8px; align-items:baseline; padding:5px 12px; font-size:12.5px; border-left:2px solid transparent; border-bottom:1px solid var(--pb); overflow:hidden; }
+.row:last-child { border-bottom:0; }
+.row .ic { text-align:center; color:var(--c,var(--muted)); } .row time { color:var(--dim); font-size:11px; font-variant-numeric:tabular-nums; }
+.row .tn { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .row .tl { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); }
+.row .td { text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; font-size:12px; }
+.row.call.ok { --c:var(--ok); } .row.call.run { --c:var(--run); border-left-color:var(--run); border-left-width:3px; background-color:color-mix(in srgb,var(--run) 20%,transparent); }
+.row.call.run .ic { display:inline-block; animation:spin 1.1s linear infinite; animation-delay:var(--phase,0ms); font-size:14px; } .row.call.run .tn, .row.call.run .tl { color:var(--text); font-weight:600; }
+.row.call.run .td { color:var(--run); font-weight:700; }
+.row.call.run::after { content:""; position:absolute; left:0; bottom:0; width:22%; height:2px; border-radius:2px; background:var(--run); box-shadow:0 0 8px var(--run); animation:tool-progress 1.1s linear infinite; animation-delay:var(--phase,0ms); }
+@keyframes tool-progress { from { transform:translateX(-100%); } to { transform:translateX(455%); } }
+.row.call.bad { --c:var(--err); border-left-color:var(--err); } .row.call.bad .tn { color:var(--err); }
+.row.sub .tn::after { content:" sub"; font-weight:400; font-size:10px; color:var(--database-stroke); }
+.row.note { --c:var(--dim); } .row.note .tn { font-weight:500; color:var(--muted); } .row.note.user { --c:var(--database-stroke); }
+.row.fresh { animation:pop .4s ease-out; }
+.empty { padding:18px 12px; color:var(--muted); }
+
+.tracebd { display:flex; flex-direction:column; padding:0; overflow:hidden; min-height:0; flex:1 1 auto; }
+.trace-truth { padding:8px 12px; border-bottom:1px solid var(--pb); color:var(--muted); font-size:11px; flex:none; background:var(--row); }
+.trace-truth b { color:var(--ok); font-weight:600; }
+.trace-graph-wrap { min-width:0; flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow:hidden; padding:16px 12px; min-height:0; }
+#traceGraph { width:100%; min-width:0; }
+.trace-graph .edge { marker-end:url(#traceArrow); }
+.trace-graph .edge.live { marker-end:url(#traceArrowOn); }
+.trace-graph .node { cursor:default; }
+
+.gov { position:fixed; inset:0; z-index:50; display:grid; place-items:center; padding:2vh 2vw; background:rgba(2,6,14,.74); backdrop-filter:blur(4px); }
+.gov[hidden] { display:none; }
+.gpanel { width:min(1180px,100%); height:min(840px,100%); }
+.gpanel .hd { gap:14px; } .gpanel .hd em { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.gstage { flex:1 1 auto; min-height:0; padding:8px 14px; display:flex; }
+.gsvg { width:100%; height:100%; display:block; --workflow-beat:1.6s; --workflow-ease:cubic-bezier(.45,0,.55,1); }
+.gsvg text { font-family:inherit; dominant-baseline:middle; text-anchor:middle; fill:var(--text); }
+.gsvg .gband { font-size:11px; font-weight:600; letter-spacing:.08em; text-anchor:start; fill:var(--muted); }
+.gsvg .gnode { opacity:.22; transition:opacity .35s ease; transform-box:fill-box; transform-origin:center; }
+.gsvg .gnode.seen { opacity:.7; }
+.gsvg .gnode.on { opacity:1; animation:node-breathe var(--workflow-beat) var(--workflow-ease) infinite; }
+.gsvg .shape { fill:var(--f); stroke:var(--c); stroke-width:1.4; vector-effect:non-scaling-stroke; transition:fill .3s ease, stroke .3s ease; }
+.gsvg .gnode.on .shape { fill:var(--accent); fill-opacity:.16; stroke:var(--accent); stroke-width:3; }
+.gsvg .gt { font-size:12px; font-weight:600; } .gsvg .gs { font-size:9.5px; fill:var(--muted); }
+.gsvg .gtag { font-size:8px; font-weight:700; letter-spacing:.08em; text-anchor:end; fill:var(--c); }
+.k-step { --c:var(--external-stroke); --f:var(--external-fill); } .k-decision { --c:var(--cloud-stroke); --f:var(--cloud-fill); }
+.k-llm { --c:var(--backend-stroke); --f:var(--backend-fill); } .k-store { --c:var(--database-stroke); --f:var(--database-fill); }
+.k-human { --c:var(--frontend-stroke); --f:var(--frontend-fill); } .k-block { --c:var(--security-stroke); --f:var(--security-fill); }
+.gsvg .gedge { fill:none; stroke:var(--arrow); stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; marker-end:url(#garr); opacity:.22; transition:opacity .35s ease, stroke .35s ease; }
+.gsvg .gedge.dash { stroke-dasharray:5 4; } .gsvg .gedge.dbl { marker-start:url(#garr); }
+.gsvg .gedge.seen { opacity:.7; } .gsvg .gedge.on { opacity:1; stroke:var(--accent); marker-end:url(#garrOn); } .gsvg .gedge.dbl.on { marker-start:url(#garrOn); }
+#garr path { fill:var(--arrow); } #garrOn path { fill:var(--accent); }
+.gsvg .gpulse { fill:none; stroke:var(--accent); stroke-width:7; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:14 86; vector-effect:non-scaling-stroke; opacity:0; pointer-events:none; }
+.gsvg .gpulse.on { animation:handoff-streak var(--workflow-beat) var(--workflow-ease) infinite; }
+.gsvg .glabel { font-size:10px; font-weight:700; fill:var(--cloud-stroke); opacity:.22; transition:opacity .35s ease; }
+.gsvg .glabel.seen { opacity:.7; } .gsvg .glabel.on { opacity:1; }
+.gcap { flex:none; min-height:112px; padding:10px 14px; border-top:1px solid var(--pb); background:var(--row); }
+.gn { margin-bottom:3px; color:var(--accent); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.gcap p { font-size:13px; line-height:1.55; }
+.gcap .gm { margin-top:6px; padding-left:8px; border-left:2px solid var(--database-stroke); font-size:12px; color:var(--muted); } .gcap .gm b { color:var(--database-stroke); font-weight:600; }
+.gctl { flex:none; display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 12px; border-top:1px solid var(--pb); }
+.gdots { display:flex; flex-wrap:wrap; gap:6px; margin:0 8px; }
+.gdot { width:12px; height:12px; border-radius:50%; border:1.5px solid var(--arrow); }
+.gdot.seen { background:var(--arrow); } .gdot.on { background:var(--accent); border-color:var(--accent); box-shadow:0 0 8px var(--accent); }
+.gkeys { margin-left:auto; display:flex; flex-wrap:wrap; gap:12px; font-size:11px; color:var(--muted); }
+.gkey i { display:inline-block; width:14px; height:10px; margin-right:6px; border:1.4px solid var(--c); background:var(--f); border-radius:2px; vertical-align:-1px; }
+@media (max-width:760px) { .gkeys { display:none; } .gstage { overflow:auto; } .gsvg { min-width:720px; } }
+
+.bottom { display:grid; gap:12px; grid-template-columns:minmax(0,1fr); }
+.bottom .panel { height:210px; }
+.srow { display:grid; grid-template-columns:8px minmax(0,1fr) auto; gap:4px 8px; align-items:center; width:100%; text-align:left; padding:5px 12px; border-left:2px solid transparent; }
+.srow:hover { background:var(--row); } .srow.on { border-left-color:var(--accent); background:var(--row); }
+.srow .dot { margin:0; } .srow .st { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; }
+.srow .sc { grid-column:2; font-size:11px; color:var(--dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .srow .sa { grid-row:1; grid-column:3; font-size:11px; color:var(--dim); }
+.conv .lbl { font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:3px; }
+.conv pre { white-space:pre-wrap; word-break:break-word; font:inherit; font-size:12.5px; line-height:1.5; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+.conv .blk + .blk { margin-top:10px; padding-top:10px; border-top:1px dashed var(--pb); }
+.phase { margin-bottom:10px; } .phase:last-child { margin-bottom:0; }
+.phase .pt { display:flex; justify-content:space-between; gap:8px; font-size:12.5px; font-weight:600; }
+.phase .pt span:last-child { color:var(--muted); font-weight:500; font-variant-numeric:tabular-nums; }
+.phase.active .pt { color:var(--run); } .phase.done .pt { color:var(--ok); }
+.bar { height:4px; background:var(--pb); border-radius:2px; overflow:hidden; margin:4px 0; } .bar i { display:block; height:100%; background:var(--ok); transition:width .5s; }
+.phase.active .bar i { background:var(--run); }
+.step { display:flex; gap:8px; font-size:12px; padding:1px 0; align-items:flex-start; }
+.step .ico { flex:none; width:12px; height:12px; margin-top:2px; border-radius:50%; border:1.5px solid var(--arrow); display:grid; place-items:center; font-size:8px; line-height:1; }
+.step.completed { color:var(--muted); } .step.completed .ico { background:var(--ok); border-color:var(--ok); color:#020617; }
+.step.in_progress { font-weight:600; } .step.in_progress .ico { border-color:var(--run); border-top-color:transparent; animation:spin .9s linear infinite; }
+.kv { display:grid; grid-template-columns:auto minmax(0,1fr); gap:3px 14px; font-size:12px; } .kv div:nth-child(odd) { color:var(--muted); } .kv div:nth-child(even) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:10px; } .chips span { border:1px solid var(--pb); border-radius:4px; padding:1px 7px; font-size:11px; color:var(--muted); }
+.planname { display:flex; justify-content:space-between; gap:8px; font-size:12px; margin-top:8px; } .planname span:last-child { color:var(--muted); }
+
+@media (min-width:1100px) {
+  .app { height:100vh; grid-template-rows:auto auto minmax(0,1fr) 210px; }
+  .main { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+  .bottom { grid-template-columns:1.05fr 1.25fr 1.2fr 1fr; }
+}
+@media (max-width:1099px) {
+  .main { grid-template-columns:minmax(0, 1fr); }
+  .main .col { height:400px; }
+  .bottom { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .strip { grid-template-columns:1fr minmax(240px,2fr) 1fr 1fr; }
+  .strip .cell:nth-child(n+5) { border-top:1px solid var(--pb); }
+  .strip .cell:nth-child(5) { border-left:0; }
+  .strip .cell.c-model { grid-column:span 2; }
+}
+@media (max-width:760px) { header.top { grid-template-columns:auto minmax(0,1fr) auto; } .ttl { text-align:left; } .clock { display:none; } .bottom { grid-template-columns:minmax(0,1fr); }
+  .strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .strip .cell:nth-child(n+3) { border-top:1px solid var(--pb); }
+  .strip .cell:nth-child(odd) { border-left:0; }
+  .strip .cell:nth-child(5) { border-left:0; }
+  .strip .cell.c-model { grid-column:span 2; }
+  .row { grid-template-columns:16px 58px minmax(0,1fr) 48px; } .row .tn { display:none; } .cell { padding:7px 10px; }
+}
+@media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 2c2.2 13.8 7.9 19.6 22 22-14.1 2.4-19.8 8.2-22 22-2.2-13.8-7.9-19.6-22-22 14.1-2.4 19.8-8.2 22-22Z"/></svg>AI Live</div>
+    <div class="ttl"><h1 class="clip" id="titleText">AI Live</h1><p class="clip" id="subText"></p></div>
+    <div class="hr"><div class="clock"><b id="clockTime">--:--:--</b> <span id="clockDate"></span></div><button class="tbtn" id="guidesBtn" type="button" aria-haspopup="dialog">▶ Guides</button><button class="tbtn" id="theme" type="button" aria-label="Toggle light or dark theme"></button></div>
+  </header>
+
+  <section class="panel strip" aria-label="Session status">
+    <div class="cell" id="sStatus"></div><div class="cell c-now" id="sNow"></div><div class="cell" id="sCtx"></div>
+    <div class="cell" id="sCost"></div><div class="cell" id="sTurns"></div><div class="cell" id="sErr"></div><div class="cell c-model" id="sModel"></div>
+  </section>
+
+  <main class="main" id="main">
+    <section class="panel col flowcol"><div class="hd"><span>Agent workflow</span><em id="loopNote"></em></div>
+      <div class="bd"><div id="flow"></div>
+        <div id="detailPanel" class="detail-panel"><div class="detail-top"><h3 id="detailTitle">Context</h3><button id="detailToggle" class="detail-toggle" type="button" aria-expanded="true" aria-controls="stageDetail">Minimize −</button></div><div id="detailSummary" class="detail-summary"></div><div id="stageDetail" class="stage-detail"></div></div>
+      </div></section>
+    <section class="panel col tracecol"><div class="hd"><span>Live trace</span><em id="traceMeta"></em></div>
+      <div class="bd tracebd"><div class="trace-truth"><b>Observed JSONL only</b> · tool lifecycle grouped</div><div class="trace-graph-wrap"><div id="traceGraph"></div></div><p class="flow-caption"><span><i></i>observed in session data</span></p></div></section>
+    <section class="panel col toolscol"><div class="hd"><span>Tool calls</span><em id="toolMeta"></em></div><div class="filters" id="toolFilters"></div><ul class="rows" id="toolList"></ul></section>
+  </main>
+
+  <section class="bottom" aria-label="Session details">
+    <div class="panel"><div class="hd"><span>Sessions</span><em id="sessMeta"></em></div><div class="bd" id="sessions" style="padding:4px 0"></div></div>
+    <div class="panel"><div class="hd"><span>Conversation</span></div><div class="bd conv" id="conv"></div></div>
+    <div class="panel"><div class="hd"><span>Todo</span></div><div class="bd" id="phases"></div></div>
+    <div class="panel"><div class="hd"><span>Session</span></div><div class="bd" id="info"></div></div>
+  </section>
+</div>
+
+<div class="gov" id="guides" role="dialog" aria-modal="true" aria-labelledby="gHeading" hidden>
+  <div class="panel gpanel">
+    <div class="hd"><span id="gHeading">Process guides</span><em id="gSub"></em><button class="tbtn" id="gClose" type="button">Close ✕</button></div>
+    <div class="filters" id="gTabs"></div>
+    <div class="gstage" id="gStage"></div>
+    <div class="gcap"><div class="gn" id="gTitle"></div><p id="gStep"></p><p class="gm" id="gMine"><b>Setup của bạn · </b><span id="gMineText"></span></p></div>
+    <div class="gctl">
+      <button class="tbtn" id="gPrev" type="button">◀ Prev</button><button class="tbtn" id="gPlay" type="button" aria-pressed="true">❚❚ Pause</button><button class="tbtn" id="gNext" type="button">Next ▶</button>
+      <div class="gdots" id="gDots"></div>
+      <div class="gkeys"><span class="gkey k-step"><i></i>step</span><span class="gkey k-decision"><i></i>decision</span><span class="gkey k-llm"><i></i>LLM</span><span class="gkey k-store"><i></i>store</span><span class="gkey k-human"><i></i>human</span><span class="gkey k-block"><i></i>block</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selected = "";
+let lastEventIds = new Set();
+let toolFilter = "all";
+let sessionRows = [];
+let currentSession = null;
+const esc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+const fmtMs = (ms) => ms == null ? "" : ms < 1000 ? ms + "ms" : (ms / 1000).toFixed(1) + "s";
+const fmtNum = (n) => n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n);
+const fmtAgo = (ms) => { const s = Math.max(0, Math.round(ms / 1000)); return s < 60 ? s + "s" : s < 3600 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m"; };
+const hms = (t) => new Date(t).toLocaleTimeString("en-GB");
+const cut = (s, n) => { s = String(s || ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
+const $ = (id) => document.getElementById(id);
+
+// Slots keep their DOM until their markup changes, so hover state and running animations are not reset on every poll.
+const slotCache = new Map();
+function setSlot(id, html) {
+  if (slotCache.get(id) === html) return;
+  slotCache.set(id, html);
+  const el = $(id);
+  const top = el.scrollTop;
+  el.innerHTML = html;
+  el.scrollTop = top;
+}
+
+function tickClock() {
+  const now = new Date();
+  $("clockTime").textContent = now.toLocaleTimeString("en-GB");
+  $("clockDate").textContent = now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+let selectedStage = "";
+let lastAutoStage = "";
+const CONTEXT_STEP_MS = 750;
+let contextReplayStartedAt = 0;
+function promptContextStep(data) {
+  if (data.status !== "working" || data.pending.length || data.lastRole !== "user") return -1;
+  const prompt = data.events.slice().reverse().find((event) => event.kind === "user");
+  return prompt && Number.isFinite(prompt.at) ? elapsedContextStep(Date.now() - prompt.at) : -1;
+}
+function contextStep(data) {
+  if (selectedStage !== "context") return -1;
+  return contextReplayStartedAt ? elapsedContextStep(Date.now() - contextReplayStartedAt) : promptContextStep(data);
+}
+function elapsedContextStep(elapsed) {
+  return elapsed >= 0 && elapsed < CONTEXT_STEPS.length * CONTEXT_STEP_MS
+    ? Math.floor(elapsed / CONTEXT_STEP_MS) : -1;
+}
+function activeStation(data) {
+  if (data.status !== "working") return "";
+  if (data.pending.length || data.lastRole === "assistantCall") return "tool";
+  if (data.lastRole === "user") return promptContextStep(data) >= 0 ? "context" : "model";
+  if (data.lastRole === "assistantText") return "output";
+  return "model";
+}
+
+function recentToolResult(data) {
+  return data.events.slice().reverse().find((event) => event.kind === "result" && Date.now() - event.at >= 0 && Date.now() - event.at < 3000);
+}
+
+function toolActivityLabel(data) {
+  if (data.pending.length) return "RUNNING · " + data.pending.map((item) => item.tool).join(" + ");
+  const result = recentToolResult(data);
+  return result ? result.tool + (result.error ? " · just failed" : " · just finished") : "No tool running";
+}
+
+const NODE_ICONS = { context:'<rect x="2" y="2" width="26" height="30" rx="3"/><path d="M8 11h14M8 17h14M8 23h10"/>', model:'<rect x="3" y="5" width="26" height="24" rx="4"/><path d="M10 13h12M10 20h8M8 1v4M16 1v4M24 1v4"/>', tool:'<rect x="2" y="5" width="28" height="23" rx="3"/><path d="m8 12 5 5-5 5M17 22h7"/>', verify:'<circle cx="16" cy="16" r="14"/><path d="m9 16 5 5 9-10"/>', output:'<rect x="3" y="4" width="26" height="24" rx="3"/><path d="M9 12h12M9 19h8m7 11 5-5"/>' };
+
+function cardNode(params) {
+  const { classes, attrs, title, subtitle, icon, x, y } = params;
+  return `<g class="node ${classes}" ${attrs}><g class="badge"><rect x="${x - 52}" y="${y - 58}" width="104" height="20" rx="3"/><text x="${x}" y="${y - 48}"></text></g><rect class="halo" x="${x - 80}" y="${y - 37}" width="160" height="74" rx="7"/><rect class="card-bg" x="${x - 75}" y="${y - 32}" width="150" height="64" rx="4" fill="var(--bg)"/><rect class="card" x="${x - 75}" y="${y - 32}" width="150" height="64" rx="4"/><g class="node-icon" transform="translate(${x - 62} ${y - 16}) scale(.8)">${NODE_ICONS[icon]}</g><text class="node-title" x="${x - 30}" y="${y - 6}">${title}</text><text class="node-subtitle" x="${x - 62}" y="${y + 20}">${subtitle}</text></g>`;
+}
+
+function workflowNode(params) {
+  const labels = { context:["Context", "prompt + instructions"], model:["Model", "activity inferred"], tool:["Tool", "observed calls"], verify:["Verify", "schematic"], output:["Output", "reply observed"] };
+  const { key, x, y } = params;
+  const inferred = key === "tool" || key === "output" ? "" : " inferred";
+  const attrs = `data-stage="${key}" role="button" tabindex="0" aria-label="Show ${labels[key][0]} details"`;
+  return cardNode({ classes:`t-${key}${inferred}`, attrs, title:labels[key][0], subtitle:labels[key][1], icon:key, x, y });
+}
+
+function loopCircle(mobile) {
+  const paths = mobile
+    ? ["M155 275 H185", "M185 255 H170 V95 H185", "M335 95 H355 V275 H335", "M335 295 H355 V455 H335", "M185 455 H170 V295 H185", "M260 487 V593"]
+    : ["M255 160 H365", "M365 148 H320 V50 H365", "M515 50 H550 V148 H515", "M515 180 H550 V270 H515", "M365 270 H320 V180 H365", "M515 282 H625"];
+  const edgeNames = ["context-model", "model-tool", "tool-model", "model-verify", "verify-model", "verify-output"];
+  const inferredEdges = new Set(["model-verify", "verify-model", "verify-output"]);
+  const edges = paths.map((path, index) => `<path class="edge${inferredEdges.has(edgeNames[index]) ? " inferred" : ""}" data-edge="${edgeNames[index]}" d="${path}"/>`).join("");
+  const pulses = paths.map((path, index) => `<path class="handoff-pulse${inferredEdges.has(edgeNames[index]) ? " inferred" : ""}" data-pulse="${edgeNames[index]}" d="${path}" pathLength="100"/>`).join("");
+  const nodes = mobile
+    ? workflowNode({ key: "context", x: 80, y: 275 }) + workflowNode({ key: "tool", x: 260, y: 95 }) + workflowNode({ key: "model", x: 260, y: 275 }) + workflowNode({ key: "verify", x: 260, y: 455 }) + workflowNode({ key: "output", x: 260, y: 625 })
+    : workflowNode({ key: "context", x: 180, y: 160 }) + workflowNode({ key: "tool", x: 440, y: 50 }) + workflowNode({ key: "model", x: 440, y: 160 }) + workflowNode({ key: "verify", x: 440, y: 270 }) + workflowNode({ key: "output", x: 700, y: 270 });
+  const viewBox = mobile ? "0 0 380 680" : "0 -26 850 366";
+  const defs = `<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 1 10 5 0 9z"/></marker><marker id="arrLive" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 1 10 5 0 9z"/></marker></defs>`;
+  return `<svg viewBox="${viewBox}" class="flowsvg" aria-label="Context to Model; Model and Tool exchange; inferred Model and Verify exchange; inferred Verify to Output.">${defs}<g class="flow-edges">${edges}${pulses}</g><g class="flow-nodes">${nodes}</g></svg><p class="flow-caption"><span><i></i>observed in session data</span><span><i class="d"></i>inferred or schematic</span></p>`;
+}
+
+let previousWorkflowStation = "";
+let handoffSequence = 0;
+
+function restartHandoffPulse(svg, edgeName, sequence) {
+  return new Promise((resolve) => {
+    if (sequence !== handoffSequence) return resolve();
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return resolve();
+    const pulse = svg.querySelector(`[data-pulse="${edgeName}"]`);
+    if (!pulse) return resolve();
+    pulse.classList.remove("playing");
+    void pulse.getBoundingClientRect();
+    pulse.classList.add("playing");
+    pulse.addEventListener("animationend", () => {
+      pulse.classList.remove("playing");
+      resolve();
+    }, { once:true });
+  });
+}
+
+async function animateHandoff(svg, from, to) {
+  const sequence = ++handoffSequence;
+  const routes = {
+    "context-model": ["context-model"],
+    "context-tool": ["context-model", "model-tool"],
+    "model-tool": ["model-tool"],
+    "tool-model": ["tool-model"],
+    "tool-output": ["tool-model", "model-verify", "verify-output"],
+    "model-output": ["model-verify", "verify-output"],
+    "verify-model": ["verify-model"],
+    "verify-output": ["verify-output"]
+  };
+  const route = routes[from + "-" + to] || [];
+  for (const edgeName of route) {
+    await restartHandoffPulse(svg, edgeName, sequence);
+    if (sequence !== handoffSequence) return;
+  }
+}
+
+function renderWorkflow(data) {
+  const mobile = $("flow").clientWidth < 520;
+  if (mobile !== workflowMobile) {
+    workflowMobile = mobile;
+    handoffSequence++;
+    setSlot("flow", loopCircle(mobile));
+  }
+  const svg = $("flow").querySelector("svg");
+  const running = data.pending.length > 0;
+  const result = running ? null : recentToolResult(data);
+  const tool = svg.querySelector(".t-tool");
+  const station = activeStation(data);
+  const badge = running ? `RUNNING ${fmtMs(data.pending[0].ms)}` : result ? (result.error ? "FAILED " : "DONE ") + fmtMs(result.ms) : "";
+  svg.querySelector('[data-edge="model-tool"]').classList.toggle("live", running);
+  svg.querySelectorAll(".node").forEach((node) => node.classList.toggle("active", node.classList.contains("t-" + station)));
+  if (previousWorkflowStation && station && station !== previousWorkflowStation) animateHandoff(svg, previousWorkflowStation, station);
+  previousWorkflowStation = station || previousWorkflowStation;
+  tool.classList.toggle("recent", !!result);
+  tool.classList.toggle("failed", !!(result && result.error));
+  tool.classList.toggle("has-badge", !!badge);
+  tool.querySelector(".badge text").textContent = badge;
+  tool.querySelector(".node-subtitle").textContent = running ? "RUNNING NOW" : "observed calls";
+}
+
+let workflowMobile = null;
+
+const CONTEXT_STEPS = [
+  ["Prompt and conversation", "Current request, history or compacted summary"],
+  ["Higher-priority instructions", "System and developer constraints"],
+  ["Project rules", "AGENTS.md, RULES.md, session notes when relevant"],
+  ["Skills and tools", "Matching skill guidance and available tool definitions"],
+  ["New evidence", "Read files and tool results from previous turns"],
+  ["Assemble model input", "Keep relevant material within the context limit"]
+];
+
+function detailList(rows) {
+  return `<ol>${rows.map((row) => `<li><strong>${esc(row[0])}</strong><small>${esc(row[1])}</small></li>`).join("")}</ol>`;
+}
+
+function stageDetail(stage, data) {
+  if (stage === "context") return `<div class="detail-actions"><h3>Context assembly</h3><button type="button" id="replayContext">Replay illustration</button></div><p class="detail-status">Illustrative sequence · not live task telemetry</p><p>Conceptual reading order; OMP does not expose individual context-loading events.</p>${detailList(CONTEXT_STEPS)}`;
+  if (stage === "tool") {
+    const pending = data.pending.map((item) => [item.tool, (item.intent || "Running") + " · " + fmtMs(item.ms)]);
+    const rows = pending.length ? pending : [["No tool running", "The latest tool call may already have returned"]];
+    return `<h3>Tool</h3><p class="detail-status">${pending.length ? pending.length + " running now" : "No running call observed"}</p>${detailList(rows)}<p>Call → optional approval → execution → result. Hook and approval events are not exposed by this viewer.</p>`;
+  }
+  if (stage === "model") return `<h3>Model</h3><p>Consumes the assembled context and tool results, then decides whether to call a tool, verify, or reply.</p><p class="detail-status">${data.status === "working" && !data.pending.length ? "Working (inferred from recent session activity)" : "No model activity confirmed"}</p>`;
+  if (stage === "verify") return `<h3>Verify</h3><p>Check behavior with a run, test, or inspection as needed. A failed check returns to Model for correction.</p><p class="detail-status">Schematic stage · no live Verify event in session data</p>`;
+  return `<h3>Output</h3><p>Reply with results, evidence, and unverified items. Session notes are saved when project rules require them.</p><p class="detail-status">${data.lastRole === "assistantText" ? "Latest assistant reply observed" : "No recent reply observed"}</p>`;
+}
+
+function stageSummary(stage, data) {
+  if (stage === "tool") {
+    if (!data.pending.length) return "Tool · no running call observed";
+    const item = data.pending[0];
+    const others = data.pending.length > 1 ? ` · +${data.pending.length - 1} more` : "";
+    return `${item.tool} · ${fmtMs(item.ms)} running${others}`;
+  }
+  if (stage === "context") return "Context · six-step illustration (not telemetry)";
+  if (stage === "verify") return "Verify · schematic, not measured";
+  if (stage === "model") return data.status === "working" && !data.pending.length ? "Model · activity inferred" : "Model · no activity confirmed";
+  return data.lastRole === "assistantText" ? "Output · latest reply observed" : "Output · no recent reply observed";
+}
+
+function setDetailCollapsed(collapsed) {
+  $("detailPanel").classList.toggle("collapsed", collapsed);
+  $("detailToggle").textContent = collapsed ? "Expand +" : "Minimize −";
+  $("detailToggle").setAttribute("aria-expanded", String(!collapsed));
+}
+
+function showStage(stage, data) {
+  selectedStage = stage;
+  $("detailTitle").textContent = stage.charAt(0).toUpperCase() + stage.slice(1);
+  $("detailSummary").textContent = stageSummary(stage, data);
+  const detail = $("stageDetail");
+  const html = stageDetail(stage, data);
+  if (slotCache.get("stageDetail") !== html) {
+    const scroll = detail.scrollTop;
+    setSlot("stageDetail", html);
+    detail.scrollTop = scroll;
+  }
+  $("flow").querySelectorAll("[data-stage]").forEach((node) => node.classList.toggle("selected", node.dataset.stage === stage));
+}
+function updateContextSequence() {
+  const detail = $("stageDetail");
+  if (selectedStage !== "context" || !currentSession) return;
+  const step = contextStep(currentSession);
+  detail.querySelectorAll("li").forEach((item, index) => item.classList.toggle("simulated", index === step));
+  const status = detail.querySelector(".detail-status");
+  if (status) status.textContent = step < 0
+    ? "Illustrative sequence · not live task telemetry"
+    : `Illustration ${step + 1}/${CONTEXT_STEPS.length} · not live task telemetry`;
+  if (contextReplayStartedAt && step < 0) contextReplayStartedAt = 0;
+}
+
+function cellHtml(label, value, sub, cls) {
+  return `<span class="k">${label}</span><span class="v ${cls || ""}">${value}</span><span class="s clip">${sub || "&nbsp;"}</span>`;
+}
+
+function setStrip(data) {
+  const u = data.usage;
+  const since = Date.now() - data.lastAt;
+  const pendingMs = data.pending.length ? Math.max.apply(null, data.pending.map((p) => p.ms)) : 0;
+  const mark = { working: "w", idle: "i", ended: "e" }[data.status];
+  const word = { working: "WORKING", idle: "IDLE", ended: "ENDED" }[data.status];
+  const sub = data.status === "working"
+    ? (data.pending.length ? "tool · " + fmtAgo(pendingMs) : "last activity " + fmtAgo(since) + " ago")
+    : data.status === "idle" ? "since " + fmtAgo(since) : "";
+  setSlot("sStatus", cellHtml("Status", `<i class="dot ${mark}"></i>${word}`, sub));
+  if (data.pending.length) {
+    const first = data.pending[0];
+    const more = data.pending.length > 1 ? ` <span class="mut">+${data.pending.length - 1} more</span>` : "";
+    setSlot("sNow", cellHtml("Now", `<b class="tool">${esc(first.tool)}</b> ${esc(cut(first.intent || "", 90))}${more}`, esc(first.args), "sm clip"));
+  } else {
+    const text = data.status === "ended" ? "Session ended" : data.status === "working" ? "Model is thinking…" : "Waiting for your input";
+    setSlot("sNow", cellHtml("Now", `<span class="mut">${text}</span>`, "", "sm clip"));
+  }
+  setSlot("sCtx", cellHtml("Context", data.context == null ? "—" : fmtNum(data.context), data.compactions ? "compacted " + data.compactions + "×" : "no compaction"));
+  setSlot("sCost", cellHtml("Cost", "$" + u.cost.toFixed(2), "in " + fmtNum(u.input) + " · out " + fmtNum(u.output)));
+  setSlot("sTurns", cellHtml("Prompts · replies", data.userCount + " · " + data.assistantTurns, ""));
+  setSlot("sErr", cellHtml("Tool errors", `<span class="${data.errors ? "err" : ""}">${data.errors}</span>`, ""));
+  setSlot("sModel", cellHtml("Model", esc(cut((data.model || "").split("/").pop(), 28)), esc(data.thinking || ""), "sm clip"));
+}
+
+function toolRows(data) {
+  const events = data.events.slice().reverse().filter((event) => event.kind !== "result");
+  const calls = events.filter((event) => event.kind === "call");
+  const pendingById = {};
+  data.pending.forEach((item) => { pendingById[item.id] = item; });
+  const msOf = (event) => event.state === "running" && pendingById[event.id] ? pendingById[event.id].ms : event.ms;
+  const maxMs = Math.max.apply(null, [1000].concat(calls.map((call) => msOf(call) || 0)));
+  const visible = events.filter((event) => toolFilter === "all" || (event.kind === "call" && (toolFilter === "running" ? event.state === "running" : event.state === "error")));
+  const counts = { all: calls.length, running: calls.filter((c) => c.state === "running").length, error: calls.filter((c) => c.state === "error").length };
+  const filters = [["all", "All", counts.all, ""], ["running", "Running", counts.running, ""], ["error", "Errors", counts.error, "bad"]]
+    .map((f) => `<button class="fbtn ${f[3]}" type="button" data-filter="${f[0]}" aria-pressed="${toolFilter === f[0]}">${f[1]}<b>${f[2]}</b></button>`).join("");
+  const total = Object.keys(data.toolCounts).reduce((sum, key) => sum + data.toolCounts[key], 0);
+  const list = visible.length ? visible.map((event) => {
+    const fresh = !lastEventIds.has(event.id) && lastEventIds.size ? " fresh" : "";
+    if (event.kind === "user") return `<li class="row note user${fresh}"><span class="ic">›</span><time>${hms(event.at)}</time><b class="tn">prompt</b><span class="tl">${esc(event.label)}</span><span class="td"></span></li>`;
+    if (event.kind === "reply") return `<li class="row note${fresh}"><span class="ic">✎</span><time>${hms(event.at)}</time><b class="tn">reply</b><span class="tl">${esc(event.label)}</span><span class="td"></span></li>`;
+    const ms = msOf(event);
+    const mark = event.state === "running" ? "run" : event.state === "error" ? "bad" : "ok";
+    const icon = mark === "run" ? "◔" : mark === "bad" ? "✕" : "✓";
+    const phase = mark === "run" ? -((Date.now() - event.at) % 1100) : 0;
+    return `<li class="row call ${mark}${event.lane === "sub" ? " sub" : ""}${fresh}" style="--phase:${phase}ms"><span class="ic">${icon}</span><time>${hms(event.at)}</time><b class="tn">${esc(event.tool)}</b><span class="tl">${esc(event.label)}</span><span class="td">${fmtMs(ms)}</span></li>`;
+  }).join("") : `<li class="empty">${toolFilter === "all" ? "No activity yet." : "Nothing matches this filter in the recent window."}</li>`;
+  return { filters, list, meta: `last ${calls.length} of ${total} calls` };
+}
+
+function setToolList(data) {
+  const rows = toolRows(data);
+  setSlot("toolFilters", rows.filters);
+  setSlot("toolList", rows.list);
+  $("toolMeta").textContent = rows.meta;
+}
+
+const TRACE_NODES = {
+  prompt: { classes:"t-context", title:"Prompt", icon:"context", x:80, y:125, idle:"waiting" },
+  tool: { classes:"t-tool", title:"Tool", icon:"tool", x:300, y:60, idle:"idle" },
+  todo: { classes:"t-verify", title:"Todo", icon:"verify", x:300, y:190, idle:"idle" },
+  reply: { classes:"t-output", title:"Reply", icon:"output", x:520, y:125, idle:"waiting" }
+};
+const TRACE_EDGES = [
+  ["prompt-tool", "M155 115 H190 V60 H225"],
+  ["tool-todo", "M285 92 V158"],
+  ["todo-tool", "M315 158 V92"],
+  ["tool-reply", "M375 60 H410 V115 H445"],
+  ["todo-reply", "M375 190 H410 V135 H445"]
+];
+
+function traceSvg() {
+  const edges = TRACE_EDGES.map((edge) => `<path class="edge" data-edge="${edge[0]}" d="${edge[1]}"/>`).join("");
+  const pulses = TRACE_EDGES.map((edge) => `<path class="handoff-pulse" data-pulse="${edge[0]}" d="${edge[1]}" pathLength="100"/>`).join("");
+  const nodes = Object.keys(TRACE_NODES).map((key) => {
+    const node = TRACE_NODES[key];
+    return cardNode({ classes:node.classes, attrs:`data-trace-stage="${key}"`, title:node.title, subtitle:node.idle, icon:node.icon, x:node.x, y:node.y });
+  }).join("");
+  const marker = (id, fill) => `<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 1 10 5 0 9z" fill="${fill}"/></marker>`;
+  return `<svg viewBox="0 -10 600 240" class="flowsvg trace-graph" role="img" aria-label="Observed Live Trace workflow: Prompt, Tool, Todo, Reply."><defs>${marker("traceArrow", "var(--arrow)")}${marker("traceArrowOn", "var(--accent)")}</defs><g class="flow-edges">${edges}${pulses}</g><g class="flow-nodes">${nodes}</g></svg>`;
+}
+
+function latestTraceState(data) {
+  const event = data.trace[data.trace.length - 1];
+  const pending = data.pending[0];
+  if (pending) return { stage:pending.tool === "todo" ? "todo" : "tool", event:null, pending };
+  if (!event) return { stage:"", event:null, pending:null };
+  if (event.kind === "prompt") return { stage:"prompt", event, pending:null };
+  if (event.kind === "reply") return { stage:"reply", event, pending:null };
+  if (event.kind === "todo" || event.kind === "todo-visibility") return { stage:"todo", event, pending:null };
+  if (event.kind === "tool-start" || event.kind === "tool-end" || event.kind === "tool-error") return { stage:"tool", event, pending:null };
+  return { stage:"", event, pending:null };
+}
+
+function traceStageText(stage, state) {
+  const event = state.event, pending = state.pending;
+  if (stage === "prompt") return event ? cut(event.label, 18) : "waiting";
+  if (stage === "reply") return event ? cut(event.label, 18) : "waiting";
+  if (stage === "todo") return pending ? cut(pending.intent || "running", 18) : event ? cut(event.label, 18) : "idle";
+  if (stage === "tool") {
+    if (pending) return cut(pending.tool + " · " + (pending.intent || "running"), 18);
+    return event ? cut((event.label || event.tool || "done"), 18) : "idle";
+  }
+  return "";
+}
+
+function traceEdgeFor(stage, previous) {
+  if (previous === "prompt" && stage === "tool") return "prompt-tool";
+  if (previous === "tool" && stage === "todo") return "tool-todo";
+  if (previous === "todo" && stage === "tool") return "todo-tool";
+  if (previous === "tool" && stage === "reply") return "tool-reply";
+  if (previous === "todo" && stage === "reply") return "todo-reply";
+  return "";
+}
+
+let previousTraceStage = "";
+let lastTraceEdge = "";
+function updateTraceGraph(data) {
+  const graph = $("traceGraph");
+  if (!graph.querySelector("svg")) graph.innerHTML = traceSvg();
+  const state = latestTraceState(data), stage = state.stage, svg = graph.querySelector("svg");
+  svg.querySelectorAll("[data-trace-stage]").forEach((node) => {
+    const key = node.dataset.traceStage, active = key === stage;
+    const kind = active && state.event ? state.event.kind : "";
+    const failed = kind === "tool-error", recent = kind === "tool-end";
+    const badge = !active ? "" : state.pending ? "RUNNING " + fmtMs(state.pending.ms) : state.event ? (failed ? "FAILED " : recent ? "DONE " : "") + hms(state.event.at) : "";
+    node.classList.toggle("active", active);
+    node.classList.toggle("failed", failed);
+    node.classList.toggle("recent", recent);
+    node.classList.toggle("has-badge", !!badge);
+    node.querySelector(".badge text").textContent = badge;
+    node.querySelector(".node-subtitle").textContent = active ? traceStageText(key, state) : TRACE_NODES[key].idle;
+  });
+  if (stage && stage !== previousTraceStage) {
+    lastTraceEdge = traceEdgeFor(stage, previousTraceStage);
+    if (lastTraceEdge) restartHandoffPulse(svg, lastTraceEdge, handoffSequence);
+  }
+  svg.querySelectorAll("[data-edge]").forEach((edge) => edge.classList.toggle("live", edge.dataset.edge === lastTraceEdge));
+  if (stage) previousTraceStage = stage;
+}
+
+function setActivity(data) {
+  updateTraceGraph(data);
+  if ($("traceMeta")) $("traceMeta").textContent = "observed workflow · " + data.trace.length + " events";
+  setToolList(data);
+}
+function phaseFlow(data) {
+  if (!data.todo || !data.todo.length) return `<div class="mut">No todo in this session yet.</div>`;
+  const firstOpen = data.todo.findIndex((p) => p.tasks.some((t) => t.status !== "completed"));
+  const note = data.todoVisibility === "dismissed" ? `<div class="mut" style="margin-bottom:8px;font-size:11px">Latest todo (closed)</div>` : "";
+  return note + data.todo.map((phase, i) => {
+    const done = phase.tasks.filter((t) => t.status === "completed").length;
+    const pct = Math.round(done * 100 / Math.max(phase.tasks.length, 1));
+    const cls = done === phase.tasks.length ? "done" : i === firstOpen ? "active" : "";
+    const steps = i === firstOpen ? phase.tasks.slice(0, 8).map((t) => `<div class="step ${esc(t.status)}"><span class="ico">${t.status === "completed" ? "✓" : ""}</span><span>${esc(cut(t.content, 70))}</span></div>`).join("") : "";
+    return `<div class="phase ${cls}"><div class="pt"><span class="clip">${esc(phase.name)}</span><span>${done}/${phase.tasks.length}</span></div><div class="bar"><i style="width:${pct}%"></i></div>${steps}</div>`;
+  }).join("");
+}
+
+function setConversation(data) {
+  setSlot("conv", `<div class="blk"><div class="lbl">You</div><pre>${esc(data.lastUser) || "—"}</pre></div><div class="blk"><div class="lbl">Agent</div><pre>${esc(cut(data.lastAssistant, 420)) || "—"}</pre></div>`);
+}
+
+function setInfo(data) {
+  const u = data.usage;
+  const tools = Object.entries(data.toolCounts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => `<span>${esc(name)} ${count}</span>`).join("");
+  const plans = data.plans.map((p) => { const t = p.done + p.pending + p.blocked, pct = t ? Math.round(p.done * 100 / t) : 0;
+    return `<div class="planname"><span class="clip">${esc(p.name)}</span><span>${p.done}/${t}</span></div><div class="bar"><i style="width:${pct}%"></i></div>`; }).join("");
+  setSlot("info", `<div class="kv"><div>Tokens</div><div>in ${fmtNum(u.input)} · out ${fmtNum(u.output)}</div><div>Cache</div><div>read ${fmtNum(u.cacheRead)} · write ${fmtNum(u.cacheWrite)}</div><div>Started</div><div>${data.startedAt ? esc(hms(Date.parse(data.startedAt))) : "—"}</div><div>Cost</div><div>$${u.cost.toFixed(2)} <span class="dim">(as logged by OMP)</span></div></div>${tools ? `<div class="chips">${tools}</div>` : ""}${plans}`);
+}
+
+const SOURCE_LABEL = { omp: "OMP", "claude-code": "Claude Code" };
+
+function setTitle(data) {
+  $("titleText").textContent = data.title || "(untitled)";
+  const src = SOURCE_LABEL[data.source] || data.source || "";
+  $("subText").textContent = (src ? src + "  ·  " : "") + (data.cwd || "") + (data.model ? "  ·  " + data.model : "");
+}
+
+function render(data) {
+  currentSession = data;
+  setTitle(data);
+  setStrip(data);
+  $("loopNote").textContent = toolActivityLabel(data);
+  const active = activeStation(data);
+  if (!selectedStage || (active && active !== lastAutoStage && selectedStage === lastAutoStage)) selectedStage = active || "context";
+  lastAutoStage = active;
+  renderWorkflow(data);
+  showStage(selectedStage, data);
+  updateContextSequence();
+  setActivity(data);
+  setConversation(data);
+  setSlot("phases", phaseFlow(data));
+  setInfo(data);
+  lastEventIds = new Set(data.events.map((e) => e.id));
+}
+
+function renderSessions() {
+  const mark = { working: "w", idle: "i", ended: "e" };
+  const now = Date.now();
+  const auto = `<li><button class="srow ${selected === "" ? "on" : ""}" type="button" data-file=""><i class="dot a"></i><span class="st">Auto · latest session</span></button></li>`;
+  const rows = sessionRows.map((r) => `<li><button class="srow ${r.file === selected ? "on" : ""}" type="button" data-file="${esc(r.file)}"><i class="dot ${mark[r.status]}"></i><span class="st">${esc(cut(r.title, 48))}</span><span class="sa">${fmtAgo(now - r.mtime)}</span><span class="sc">${esc(SOURCE_LABEL[r.source] || r.source || "")} · ${esc((r.cwd || "").split("/").pop())}</span></button></li>`).join("");
+  setSlot("sessions", `<ul>${auto}${rows}</ul>`);
+  const live = sessionRows.filter((r) => r.status === "working").length;
+  $("sessMeta").textContent = live + " live · " + sessionRows.length + " recent";
+}
+
+async function refreshSessions() {
+  try {
+    sessionRows = await (await fetch("/api/sessions")).json();
+    renderSessions();
+  } catch { /* server restarting */ }
+}
+
+let tickInFlight = false;
+async function tick() {
+  if (tickInFlight) return;
+  tickInFlight = true;
+  const requested = selected;
+  try {
+    const res = await fetch("/api/session" + (requested ? "?file=" + encodeURIComponent(requested) : ""));
+    if (res.ok) {
+      const data = await res.json();
+      if (requested === selected) render(data);
+    }
+  } catch { /* server restarting */ }
+  finally { tickInFlight = false; }
+}
+
+$("sessions").addEventListener("click", (event) => {
+  const row = event.target.closest("[data-file]");
+  if (!row) return;
+  selected = row.dataset.file;
+  lastEventIds = new Set();
+  previousWorkflowStation = "";
+  previousTraceStage = "";
+  lastTraceEdge = "";
+  handoffSequence++;
+  renderSessions();
+  tick();
+});
+$("toolFilters").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-filter]");
+  if (!button || !currentSession) return;
+  toolFilter = button.dataset.filter;
+  setToolList(currentSession);
+});
+function pickStage(node) {
+  if (!node || !currentSession) return;
+  setDetailCollapsed(false);
+  showStage(node.dataset.stage, currentSession);
+  updateContextSequence();
+}
+$("flow").addEventListener("click", (event) => pickStage(event.target.closest("[data-stage]")));
+$("flow").addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const node = event.target.closest("[data-stage]");
+  if (!node) return;
+  event.preventDefault();
+  pickStage(node);
+});
+$("detailToggle").addEventListener("click", () => setDetailCollapsed(!$("detailPanel").classList.contains("collapsed")));
+setDetailCollapsed(true);
+$("stageDetail").addEventListener("click", (event) => {
+  if (event.target.id !== "replayContext") return;
+  contextReplayStartedAt = Date.now();
+  updateContextSequence();
+});
+setInterval(() => {
+  if (!currentSession) return;
+  if (selectedStage === "context") updateContextSequence();
+  if (activeStation(currentSession) !== lastAutoStage) render(currentSession);
+}, 100);
+const GUIDE_STEP_MS = 3600;
+const GUIDE_SIZE = { decision:[170, 76], store:[140, 60] };
+const GUIDE_SOURCE = "Source: HackProduct · schematic, not OMP telemetry";
+const GUIDES = [
+  { id:"harness", tab:"Prompt · Context · Harness", sub:GUIDE_SOURCE, w:920, h:500,
+    bands:[[20, 22, "ERA 1 · PROMPT — the right words"], [20, 150, "ERA 2 · CONTEXT — the right information"], [20, 330, "ERA 3 · HARNESS — the right system"]],
+    nodes:[
+      { id:"p1", k:"step", x:150, y:76, w:170, t:"well-worded prompt" }, { id:"l1", k:"llm", x:460, y:76, w:110, t:"LLM" }, { id:"a1", k:"step", x:770, y:76, t:"better answer" },
+      { id:"dc", k:"step", x:100, y:184, w:130, h:34, t:"docs" }, { id:"mem", k:"step", x:100, y:224, w:130, h:34, t:"memory" }, { id:"tl", k:"step", x:100, y:264, w:130, h:34, t:"tool results" },
+      { id:"cx", k:"step", x:330, y:224, t:"context window" }, { id:"l2", k:"llm", x:560, y:224, w:110, t:"LLM" }, { id:"a2", k:"step", x:790, y:224, t:"grounded answer" },
+      { id:"tk", k:"step", x:90, y:420, w:110, t:"task" }, { id:"ag", k:"llm", x:300, y:420, w:130, t:"agent" },
+      { id:"pg", k:"step", x:560, y:370, h:36, t:"policy gate" }, { id:"vf", k:"step", x:560, y:420, h:36, t:"verify" }, { id:"rt", k:"step", x:560, y:470, h:36, t:"retry" },
+      { id:"sh", k:"step", x:800, y:420, w:130, t:"shipped" }
+    ],
+    edges:[
+      { id:"e1", d:"M235 76H405" }, { id:"e2", d:"M515 76H695" },
+      { id:"e3", d:"M165 184C210 184 210 224 255 224" }, { id:"e4", d:"M165 224H255" }, { id:"e5", d:"M165 264C210 264 210 224 255 224" }, { id:"e6", d:"M405 224H505" }, { id:"e7", d:"M615 224H715" },
+      { id:"e8", d:"M145 420H235" }, { id:"e9", d:"M365 420C420 420 440 370 485 370" }, { id:"e10", d:"M365 420H485" }, { id:"e11", d:"M365 420C420 420 440 470 485 470" },
+      { id:"e12", d:"M635 370C700 370 700 420 735 420" }, { id:"e13", d:"M635 420H735" }, { id:"e14", d:"M635 470C700 470 700 420 735 420" }
+    ],
+    steps:[
+      { t:"Era 1 · Prompt", n:["p1", "l1", "a1"], e:["e1", "e2"], say:"Era 1 — prompt engineering: chỉ chỉnh câu chữ. Một lần gọi, một câu trả lời tốt hơn." },
+      { t:"Era 2 · Context", n:["dc", "mem", "tl", "cx", "l2", "a2"], e:["e3", "e4", "e5", "e6", "e7"], say:"Era 2 — context: điều khiển thứ model nhìn thấy (tài liệu, bộ nhớ, kết quả tool) trong context window. Câu trả lời bám vào dữ liệu thật.", mine:"docs/current-session.md, docs/sessions/*, codebase-memory-mcp." },
+      { t:"Era 3 · The loop", n:["tk", "ag"], e:["e8"], say:"Era 3 — harness: dựng cả hệ thống chạy quanh model. Task đi vào agent, agent bắt đầu một vòng lặp có kiểm soát." },
+      { t:"Era 3 · Three checkpoints", n:["pg", "vf", "rt"], e:["e9", "e10", "e11"], say:"Ba chốt: policy gate (được làm gì), verify (kết quả đúng chưa), retry (sai thì thử lại).", mine:"gate = hook PreToolUse cbm-code-discovery-gate (mới đọc tên lệnh, chưa kiểm hành vi); verify = es5_scan / asset_refs_check / chạy thật; review = reviewer khác model theo RULES.md." },
+      { t:"Era 3 · Shipped", n:["sh"], e:["e12", "e13", "e14"], say:"Chỉ khi qua cả ba mới shipped. Prompt và context vẫn còn, nhưng được bọc trong vòng lặp này: prompt engineering không chết, nó được bao lại." }
+    ] },
+  { id:"rag", tab:"RAG in 3 steps", sub:GUIDE_SOURCE, w:940, h:530,
+    bands:[[20, 20, "1 · PREPARE — once, offline"], [20, 190, "2 · RETRIEVE — every question"], [20, 340, "3 · GENERATE — answer with sources"]],
+    nodes:[
+      { id:"dc", k:"step", x:90, y:52, w:110, h:30, t:"Docs" }, { id:"pd", k:"step", x:90, y:92, w:110, h:30, t:"PDFs" }, { id:"wb", k:"step", x:90, y:132, w:110, h:30, t:"Web" },
+      { id:"ch", k:"step", x:320, y:92, w:130, t:"chunking" }, { id:"em", k:"step", x:520, y:92, w:130, t:"embeddings" }, { id:"vd", k:"store", x:760, y:92, w:150, t:"vector DB", s:"indexed knowledge" },
+      { id:"q", k:"step", x:100, y:252, w:130, t:"user query" }, { id:"eq", k:"step", x:290, y:252, w:110, t:"embed" }, { id:"se", k:"step", x:470, y:252, w:110, t:"search" },
+      { id:"t5", k:"step", x:640, y:252, w:130, t:"top-5 chunks" }, { id:"cx", k:"step", x:830, y:252, w:110, t:"context" },
+      { id:"sp", k:"step", x:100, y:384, h:30, t:"system prompt" }, { id:"up", k:"step", x:100, y:424, h:30, t:"user query" }, { id:"rc", k:"step", x:100, y:464, h:30, t:"retrieved context" },
+      { id:"lm", k:"llm", x:400, y:424, w:110, t:"LLM" }, { id:"gd", k:"decision", x:620, y:424, w:190, h:84, t:"grounded?" }, { id:"an", k:"step", x:840, y:424, t:"answer + sources" },
+      { id:"rr", k:"step", x:620, y:498, w:170, h:32, t:"rerank / filter / retry" }
+    ],
+    edges:[
+      { id:"b1", d:"M145 52C200 52 220 92 255 92" }, { id:"b2", d:"M145 92H255" }, { id:"b3", d:"M145 132C200 132 220 92 255 92" }, { id:"b4", d:"M385 92H455" }, { id:"b5", d:"M585 92H685" },
+      { id:"b6", d:"M165 252H235" }, { id:"b7", d:"M345 252H415" }, { id:"b8", d:"M525 252H575" }, { id:"b9", d:"M705 252H775" }, { id:"b10", d:"M760 122V175H470V230", dash:1, l:"lookup", lx:615, ly:166 },
+      { id:"b11", d:"M175 384C300 384 330 424 345 424" }, { id:"b12", d:"M175 424H345" }, { id:"b13", d:"M175 464C300 464 330 424 345 424" }, { id:"b14", d:"M455 424H525" },
+      { id:"b15", d:"M715 424H765", l:"yes", lx:740, ly:412 }, { id:"b16", d:"M620 466V482", l:"no", lx:636, ly:474 }, { id:"b17", d:"M535 498H400V446", dash:1 }
+    ],
+    steps:[
+      { t:"Prepare · ingest", n:["dc", "pd", "wb", "ch"], e:["b1", "b2", "b3"], say:"Làm một lần, offline: gom tài liệu (docs, PDF, web) rồi cắt thành các chunk nhỏ." },
+      { t:"Prepare · index", n:["em", "vd"], e:["b4", "b5"], say:"Mỗi chunk được biến thành vector embedding rồi lưu vào vector DB — đó là “kiến thức đã được lập chỉ mục”.", mine:"Không thấy vector DB / embeddings trong cấu hình. Code được lập chỉ mục dạng đồ thị bởi codebase-memory-mcp." },
+      { t:"Retrieve · search", n:["q", "eq", "se", "vd"], e:["b6", "b7", "b10"], say:"Mỗi câu hỏi: embed câu hỏi, rồi tìm trong vector DB các chunk gần nghĩa nhất." },
+      { t:"Retrieve · top-k", n:["t5", "cx"], e:["b8", "b9"], say:"Lấy top-5 chunk và ghép thành context để đưa cho model.", mine:"Tương đương: truy vấn đồ thị code (codebase-memory) và skill twg (Jira/Confluence) — không phải top-k vector." },
+      { t:"Generate · prompt", n:["sp", "up", "rc", "lm"], e:["b11", "b12", "b13"], say:"Prompt = system prompt + câu hỏi + context vừa lấy, đưa vào LLM." },
+      { t:"Generate · check", n:["gd", "an"], e:["b14", "b15"], say:"Câu trả lời có bám vào context không? Có thì trả lời kèm nguồn.", mine:"Tương đương: quy tắc “không bịa, đánh dấu suy luận” và verify bằng chạy thật. Đó là quy tắc văn bản, không phải vòng rerank tự động." },
+      { t:"Generate · retry", n:["gd", "rr", "lm"], e:["b16", "b17"], say:"Không bám vào context thì rerank / lọc / retry rồi gọi LLM lại, thay vì trả lời bừa." }
+    ] },
+  { id:"wiki", tab:"Wiki search as a graph", sub:GUIDE_SOURCE, w:1000, h:450,
+    bands:[[20, 160, "ROW 1 → ROW 2: the line continues down"]],
+    nodes:[
+      { id:"ak", k:"step", x:90, y:110, w:160, t:"USER ASKS", s:"in Slack, plain English" }, { id:"au", k:"step", x:290, y:110, w:160, t:"AUTHENTICATE", s:"Raja · eng · US" },
+      { id:"al", k:"decision", x:490, y:110, t:"ALLOWED?" }, { id:"bk", k:"block", x:490, y:28, w:160, t:"BLOCK + LOG", s:"policy or rate limit" },
+      { id:"pl", k:"llm", x:700, y:110, w:160, t:"PLAN", s:"one lookup, no multi-hop" }, { id:"rt", k:"step", x:900, y:110, w:160, t:"RETRIEVE TOP-K", s:"8 chunks come back" },
+      { id:"wk", k:"store", x:900, y:34, w:170, t:"WIKI INDEX", s:"chunks + per-doc ACLs" },
+      { id:"se", k:"decision", x:90, y:300, t:"ANY HE CAN SEE?" }, { id:"dr", k:"llm", x:290, y:300, w:160, t:"DRAFT + CITE", s:"every claim to a chunk" },
+      { id:"ci", k:"decision", x:490, y:300, t:"ALL CITED?" }, { id:"an", k:"step", x:700, y:300, t:"ANSWER", s:"3 sentences, 2 links" }, { id:"lg", k:"store", x:900, y:300, w:190, h:56, t:"LOG", s:"query · docs · verdict · cost" },
+      { id:"na", k:"block", x:90, y:410, w:160, t:"SAY NO ACCESS", s:"plainly, and log it" }, { id:"hu", k:"human", x:490, y:410, w:160, t:"ASK #ask-legal", s:"after one retry" }
+    ],
+    edges:[
+      { id:"c1", d:"M170 110H210" }, { id:"c2", d:"M370 110H405" }, { id:"c3", d:"M490 72V50", l:"no", lx:504, ly:61 }, { id:"c4", d:"M575 110H620" }, { id:"c5", d:"M780 110H820" },
+      { id:"c6", d:"M900 86V64", dbl:1 }, { id:"c7", d:"M900 134V200H90V262" }, { id:"c8", d:"M175 300H210" }, { id:"c9", d:"M90 338V386", l:"none", lx:114, ly:362 },
+      { id:"c10", d:"M370 300H405" }, { id:"c11", d:"M490 262V232H290V276", dash:1, l:"retry once", lx:390, ly:224 }, { id:"c12", d:"M490 338V386", l:"still no", lx:526, ly:362 },
+      { id:"c13", d:"M575 300H625" }, { id:"c14", d:"M775 300H805" }
+    ],
+    steps:[
+      { t:"User asks", n:["ak"], e:[], say:"Người dùng hỏi trong Slack bằng tiếng thường: “what is our refund policy for enterprise?”. Một câu hỏi đi qua 10 node, chỉ 2 node là LLM (Plan và Draft); phần còn lại là code thường." },
+      { t:"Authenticate", n:["au"], e:["c1"], say:"Xác thực người hỏi: ai, team nào, vùng nào. Thông tin này quyết định họ được xem tài liệu nào." },
+      { t:"Allowed?", n:["al", "bk"], e:["c2", "c3"], say:"Được phép không? Nếu không (policy hoặc rate limit) thì chặn và ghi log — chưa tốn lần gọi model nào." },
+      { t:"Plan · LLM #1", n:["pl"], e:["c4"], say:"Lần LLM đầu tiên: lập kế hoạch một lần tra cứu, không multi-hop.", mine:"Không có pipeline này trong setup. Gần nhất: skill twg (Jira/Confluence), quyền do Atlassian xử lý phía server." },
+      { t:"Retrieve top-k", n:["rt", "wk"], e:["c5", "c6"], say:"Lấy top-k chunk (ở đây 8) từ wiki index. Mỗi chunk mang ACL của tài liệu, nên quyền được lọc ngay lúc truy vấn, không lọc sau. “The ACL filter is the product.”" },
+      { t:"Any he can see?", n:["se", "na"], e:["c7", "c9"], say:"Trong các chunk đó, có cái nào người này được xem không? Không có thì nói rõ là không có quyền và ghi log, không đoán." },
+      { t:"Draft + cite · LLM #2", n:["dr"], e:["c8"], say:"Lần LLM thứ hai: soạn câu trả lời, mỗi claim phải gắn với một chunk.", mine:"Gần nhất: quy tắc “không bịa, đánh dấu suy luận” — là quy tắc văn bản, không phải node tự động." },
+      { t:"All cited?", n:["ci"], e:["c10"], say:"Kiểm tra mọi claim đã có trích dẫn chưa." },
+      { t:"Retry once", n:["dr", "ci"], e:["c11"], say:"Chưa đủ trích dẫn thì quay lại Draft thử lại đúng một lần (đường nét đứt)." },
+      { t:"Still no → human", n:["hu"], e:["c12"], say:"Vẫn thiếu trích dẫn sau một lần retry thì chuyển cho người (#ask-legal) thay vì trả lời liều." },
+      { t:"Answer + log", n:["an", "lg"], e:["c13", "c14"], say:"Đủ trích dẫn thì trả lời 3 câu, 2 link, rồi ghi log: query · docs · verdict · cost.", mine:"Gần nhất: docs/sessions/* và docs/current-session.md đóng vai trò log." }
+    ] }
+];
+
+let guideIndex = 0, guideStep = 0, guidePlaying = false, guideTimer = 0;
+
+function guideSize(node) {
+  const base = GUIDE_SIZE[node.k] || [150, 44];
+  return [node.w || base[0], node.h || base[1]];
+}
+
+function guideShape(node) {
+  const size = guideSize(node), w = size[0], h = size[1], x = node.x, y = node.y;
+  if (node.k === "decision") return `<polygon class="shape" points="${x - w / 2},${y} ${x},${y - h / 2} ${x + w / 2},${y} ${x},${y + h / 2}"/>`;
+  if (node.k === "store") {
+    const left = x - w / 2, top = y - h / 2 + 8, bottom = y + h / 2 - 8;
+    return `<path class="shape" d="M${left} ${top}A${w / 2} 8 0 0 1 ${left + w} ${top}V${bottom}A${w / 2} 8 0 0 1 ${left} ${bottom}Z"/><ellipse class="shape" cx="${x}" cy="${top}" rx="${w / 2}" ry="8"/>`;
+  }
+  return `<rect class="shape" x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="4"/>`;
+}
+
+function guideNode(node) {
+  const size = guideSize(node), tag = node.k === "llm" ? "LLM" : node.k === "human" ? "HUMAN" : "";
+  const tagSvg = tag ? `<text class="gtag" x="${node.x + size[0] / 2 - 7}" y="${node.y - size[1] / 2 + 9}">${tag}</text>` : "";
+  const sub = node.s ? `<text class="gs" x="${node.x}" y="${node.y + 10}">${esc(node.s)}</text>` : "";
+  return `<g class="gnode k-${node.k}" data-g="${node.id}">${guideShape(node)}${tagSvg}<text class="gt" x="${node.x}" y="${node.y - (node.s ? 6 : 0)}">${esc(node.t)}</text>${sub}</g>`;
+}
+
+function guideEdge(edge) {
+  const label = edge.l ? `<text class="glabel" data-g="${edge.id}" x="${edge.lx}" y="${edge.ly}">${esc(edge.l)}</text>` : "";
+  return `<path class="gedge${edge.dash ? " dash" : ""}${edge.dbl ? " dbl" : ""}" data-g="${edge.id}" d="${edge.d}"/><path class="gpulse" data-g="${edge.id}" d="${edge.d}" pathLength="100"/>${label}`;
+}
+
+function guideSvg(guide) {
+  const marker = (id) => `<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 1 10 5 0 9z"/></marker>`;
+  const bands = guide.bands.map((band) => `<text class="gband" x="${band[0]}" y="${band[1]}">${esc(band[2])}</text>`).join("");
+  return `<svg class="gsvg" viewBox="0 0 ${guide.w} ${guide.h}" role="img" aria-label="${esc(guide.tab)} diagram"><defs>${marker("garr")}${marker("garrOn")}</defs>${bands}${guide.edges.map(guideEdge).join("")}${guide.nodes.map(guideNode).join("")}</svg>`;
+}
+
+function guideReach(guide, index) {
+  const cur = new Set(), seen = new Set();
+  guide.steps.forEach((step, i) => {
+    if (i > index) return;
+    const target = i === index ? cur : seen;
+    step.n.concat(step.e).forEach((id) => target.add(id));
+  });
+  return { cur:cur, seen:seen };
+}
+
+function guideApply() {
+  const guide = GUIDES[guideIndex], step = guide.steps[guideStep], reach = guideReach(guide, guideStep);
+  $("gStage").querySelectorAll("[data-g]").forEach((el) => {
+    el.classList.toggle("on", reach.cur.has(el.dataset.g));
+    el.classList.toggle("seen", !reach.cur.has(el.dataset.g) && reach.seen.has(el.dataset.g));
+  });
+  $("gTitle").textContent = "Step " + (guideStep + 1) + "/" + guide.steps.length + " · " + step.t;
+  $("gStep").textContent = step.say;
+  $("gMine").hidden = !step.mine;
+  $("gMineText").textContent = step.mine || "";
+  $("gDots").querySelectorAll(".gdot").forEach((dot, i) => {
+    dot.classList.toggle("on", i === guideStep);
+    dot.classList.toggle("seen", i < guideStep);
+    dot.setAttribute("aria-current", i === guideStep ? "step" : "false");
+  });
+}
+
+function guideBuild() {
+  const guide = GUIDES[guideIndex];
+  $("gStage").innerHTML = guideSvg(guide);
+  $("gSub").textContent = guide.sub;
+  $("gDots").innerHTML = guide.steps.map((step, i) => `<button class="gdot" type="button" data-step="${i}" aria-label="Step ${i + 1}: ${esc(step.t)}"></button>`).join("");
+  $("gTabs").querySelectorAll("[data-guide]").forEach((button) => button.setAttribute("aria-pressed", String(Number(button.dataset.guide) === guideIndex)));
+}
+
+function guideSchedule() {
+  clearTimeout(guideTimer);
+  if (!guidePlaying || $("guides").hidden) return;
+  guideTimer = setTimeout(() => guideGo(guideStep + 1), GUIDE_STEP_MS);
+}
+
+function guideGo(step) {
+  const count = GUIDES[guideIndex].steps.length;
+  guideStep = ((step % count) + count) % count;
+  guideApply();
+  guideSchedule();
+}
+
+function guideSetPlaying(flag) {
+  guidePlaying = flag;
+  $("gPlay").textContent = flag ? "❚❚ Pause" : "▶ Play";
+  $("gPlay").setAttribute("aria-pressed", String(flag));
+  guideSchedule();
+}
+
+function guidePick(index) {
+  guideIndex = index;
+  guideStep = 0;
+  guideBuild();
+  guideApply();
+  guideSchedule();
+}
+
+function guideOpen() {
+  $("guides").hidden = false;
+  document.querySelector(".app").inert = true;
+  guidePick(guideIndex);
+  guideSetPlaying(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  $("gClose").focus();
+}
+
+function guideClose() {
+  clearTimeout(guideTimer);
+  $("guides").hidden = true;
+  document.querySelector(".app").inert = false;
+  $("guidesBtn").focus();
+}
+
+function guideKey(event) {
+  if ($("guides").hidden) return;
+  if (event.key === "Escape") guideClose();
+  else if (event.key === "ArrowRight") guideGo(guideStep + 1);
+  else if (event.key === "ArrowLeft") guideGo(guideStep - 1);
+  else if (event.key === " " && event.target.tagName !== "BUTTON") { event.preventDefault(); guideSetPlaying(!guidePlaying); }
+}
+
+$("gTabs").innerHTML = GUIDES.map((guide, i) => `<button class="fbtn" type="button" data-guide="${i}" aria-pressed="false">${esc(guide.tab)}</button>`).join("");
+$("gTabs").addEventListener("click", (event) => { const button = event.target.closest("[data-guide]"); if (button) guidePick(Number(button.dataset.guide)); });
+$("gDots").addEventListener("click", (event) => { const button = event.target.closest("[data-step]"); if (button) guideGo(Number(button.dataset.step)); });
+$("gPrev").addEventListener("click", () => guideGo(guideStep - 1));
+$("gNext").addEventListener("click", () => guideGo(guideStep + 1));
+$("gPlay").addEventListener("click", () => guideSetPlaying(!guidePlaying));
+$("gClose").addEventListener("click", guideClose);
+$("guides").addEventListener("click", (event) => { if (event.target === $("guides")) guideClose(); });
+$("guidesBtn").addEventListener("click", guideOpen);
+document.addEventListener("keydown", guideKey);
+const themeBtn = $("theme");
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  themeBtn.textContent = theme === "dark" ? "☀ Light" : "☾ Dark";
+  document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#050a14" : "#f8fafc";
+  try { localStorage.setItem("ai-live-theme", theme); } catch (e) { /* storage unavailable */ }
+}
+themeBtn.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+applyTheme(document.documentElement.dataset.theme);
+tickClock(); setInterval(tickClock, 1000);
+refreshSessions().then(tick);
+setInterval(tick, 300);
+setInterval(refreshSessions, 4000);
+</script>
+</body>
+</html>

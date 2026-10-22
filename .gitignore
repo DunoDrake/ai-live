@@ -1,0 +1,6 @@
+# Portable build artifact — regenerate, don't version
+dist/
+
+# OS
+.DS_Store
+**/.DS_Store
