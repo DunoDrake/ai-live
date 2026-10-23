@@ -194,6 +194,6 @@ Known limitation: the guide dialog sets the background inert and focuses Close, 
 
 - Dashboard runtime labels remain English.
 - Never remove `inferred`, `schematic`, `illustrative` or `not telemetry` qualifiers where specified.
-- Cost says `(as logged by OMP)`; the viewer does not recompute it.
+- `Logged cost` is the sum of prices as logged by OMP and is never recomputed. A list-price estimate appears only as a separate `+ $X est.` note (`est. max` when any estimated reply has no cache split), and unpriced replies stay disclosed.
 - Process Guide source attribution and non-telemetry label remain visible.
 - `Setup của bạn` comparison notes may be Vietnamese because they answer the user's local setup question; identifiers and products remain exact.

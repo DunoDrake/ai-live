@@ -33,6 +33,33 @@ const EVENT_LIMIT = 60;
 const SNAPSHOT_EVENTS = 60;
 const TRACE_LIMIT = 80;
 
+// USD per million tokens, measured from priced replies in local OMP transcripts. Anthropic input rates are inferred
+// from cache ratios (read 0.1x, write 1.25x). Models with several observed prices or none are intentionally absent.
+const ESTIMATE_RATES = [
+	{ match: /claude-sonnet-5/, input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 },
+	{ match: /claude-opus-(?:4-8|5)(?!\d)/, input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
+	{ match: /claude-haiku-4-5/, input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 },
+	{ match: /gpt-5\.6-luna/, input: 0.2, output: 1.2, cacheRead: 0.02, cacheWrite: 0 },
+	{ match: /gpt-6-astra/, input: 10, output: 50, cacheRead: 1, cacheWrite: 0 },
+];
+
+function estimateCost(model, tokens) {
+	const rates = ESTIMATE_RATES.find((entry) => entry.match.test(model || ""));
+	if (!rates) return null;
+	return (tokens.input * rates.input + tokens.output * rates.output + tokens.cacheRead * rates.cacheRead + tokens.cacheWrite * rates.cacheWrite) / 1e6;
+}
+
+// Replies without a logged price: add a list-price estimate when a rate is known, else count them as unpriced.
+// A reply with no cache split is billed entirely at the input rate here, which can only overstate the real cost.
+function addUnloggedUsage(state, model, tokens) {
+	if (tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite <= 0) return;
+	const estimate = estimateCost(model, tokens);
+	if (estimate === null) { state.usage.unpricedTurns += 1; return; }
+	state.usage.estimatedCost += estimate;
+	state.usage.estimatedTurns += 1;
+	if (tokens.cacheRead + tokens.cacheWrite === 0) state.usage.estimatedUncachedTurns += 1;
+}
+
 const cache = new Map();
 
 function newState(file, source) {
@@ -40,7 +67,7 @@ function newState(file, source) {
 		file, source, offset: 0, remainder: "",
 		id: "", title: "", cwd: "", model: "", thinking: "", startedAt: "", lastAt: 0,
 		ended: false, userCount: 0, assistantTurns: 0, lastUser: "", lastAssistant: "",
-		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, pricedTurns: 0, unpricedTurns: 0 },
+		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, pricedTurns: 0, unpricedTurns: 0, estimatedCost: 0, estimatedTurns: 0, estimatedUncachedTurns: 0 },
 		context: null, compactions: 0, toolCounts: {}, pending: {},
 		todo: null, todoVisibility: "", tasks: {}, errors: 0, seenResponses: new Set(),
 		events: [], eventIds: new Set(), calls: {}, lastRole: "",
@@ -116,7 +143,7 @@ function applyAssistant(state, entry) {
 		state.usage.cacheWrite += usage.cacheWrite || 0;
 		const loggedCost = usage.cost && Number(usage.cost.total);
 		if (loggedCost > 0) { state.usage.cost += loggedCost; state.usage.pricedTurns += 1; }
-		else if ((usage.input || 0) + (usage.output || 0) + (usage.cacheRead || 0) + (usage.cacheWrite || 0) > 0) state.usage.unpricedTurns += 1;
+		else addUnloggedUsage(state, message.model || state.model, { input: usage.input || 0, output: usage.output || 0, cacheRead: usage.cacheRead || 0, cacheWrite: usage.cacheWrite || 0 });
 	}
 	if (message.contextSnapshot) state.context = message.contextSnapshot.promptTokens;
 	const text = clip(textOf(message.content), 600);
@@ -243,7 +270,7 @@ function ccApplyAssistant(state, entry) {
 		state.usage.output += usage.output_tokens || 0;
 		state.usage.cacheRead += usage.cache_read_input_tokens || 0;
 		state.usage.cacheWrite += usage.cache_creation_input_tokens || 0;
-		if ((usage.input_tokens || 0) + (usage.output_tokens || 0) + (usage.cache_read_input_tokens || 0) + (usage.cache_creation_input_tokens || 0) > 0) state.usage.unpricedTurns += 1;
+		addUnloggedUsage(state, message.model, { input: usage.input_tokens || 0, output: usage.output_tokens || 0, cacheRead: usage.cache_read_input_tokens || 0, cacheWrite: usage.cache_creation_input_tokens || 0 });
 	}
 	const parts = Array.isArray(message.content) ? message.content : [];
 	const calls = parts.filter((part) => part.type === "tool_use");
@@ -462,10 +489,28 @@ async function codexQuota() {
 	} catch { return codexTranscriptQuota(); }
 }
 
-function claudeToken() {
+function parseClaudeAccessToken(raw) {
 	try {
-		const credentials = JSON.parse(fs.readFileSync(CLAUDE_CREDENTIALS_FILE, "utf8"));
+		const credentials = JSON.parse(raw);
 		return credentials.claudeAiOauth && credentials.claudeAiOauth.accessToken || "";
+	} catch { return ""; }
+}
+
+// Claude Code keeps live credentials in the macOS Keychain; the JSON file goes stale once it migrates there.
+function claudeKeychainToken() {
+	if (process.platform !== "darwin") return Promise.resolve("");
+	return new Promise((resolve) => {
+		execFile("security", ["find-generic-password", "-s", "Claude Code-credentials", "-w"], { timeout: 5000 }, (err, stdout) => {
+			resolve(err || !stdout ? "" : parseClaudeAccessToken(stdout));
+		});
+	});
+}
+
+async function claudeToken() {
+	const keychainToken = await claudeKeychainToken();
+	if (keychainToken) return keychainToken;
+	try {
+		return parseClaudeAccessToken(fs.readFileSync(CLAUDE_CREDENTIALS_FILE, "utf8"));
 	} catch { return ""; }
 }
 
@@ -475,7 +520,7 @@ function claudeWindow(raw, fallbackMinutes) {
 }
 
 async function claudeQuota() {
-	const token = claudeToken();
+	const token = await claudeToken();
 	if (!token) return { id:"claude", label:"Claude", status:"unavailable", source:"Anthropic OAuth", updatedAt:0, reason:"Not signed in", session:null, weekly:null };
 	try {
 		const response = await fetch("https://api.anthropic.com/api/oauth/usage", { headers:{ authorization:"Bearer " + token, "anthropic-beta":"oauth-2025-04-20" }, signal:AbortSignal.timeout(8000) });

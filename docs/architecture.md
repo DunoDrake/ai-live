@@ -52,7 +52,7 @@ External runtime dependency: Google Fonts for JetBrains Mono. The system fallbac
 |---|---|---|
 | `OMP_SESSIONS_DIR` | `~/.omp/agent/sessions` | Root containing one directory level of workspace/session groups and JSONL files |
 | `PORT` | `4873` | HTTP port; server still binds only to `127.0.0.1` |
-| `CLAUDE_CREDENTIALS_FILE` | `~/.claude/.credentials.json` | Optional Claude OAuth credential file read only by the server |
+| `CLAUDE_CREDENTIALS_FILE` | `~/.claude/.credentials.json` | Fallback Claude OAuth credential file read only by the server; on macOS the `Claude Code-credentials` Keychain entry is read first |
 
 Internal bounds:
 

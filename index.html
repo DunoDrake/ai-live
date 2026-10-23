@@ -580,8 +580,11 @@ function setStrip(data) {
     setSlot("sNow", cellHtml("Now", `<span class="mut">${text}</span>`, "", "sm clip"));
   }
   setSlot("sCtx", cellHtml("Context", data.context == null ? "—" : fmtNum(data.context), data.compactions ? "compacted " + data.compactions + "×" : "no compaction"));
-  const costNote = u.unpricedTurns ? u.unpricedTurns + " unpriced" : u.pricedTurns + " priced";
-  setSlot("sCost", cellHtml("Logged cost", "$" + u.cost.toFixed(2), costNote));
+  const costNotes = [];
+  if (u.estimatedTurns) costNotes.push("+ $" + u.estimatedCost.toFixed(2) + (u.estimatedUncachedTurns ? " est. max" : " est.") + " (" + u.estimatedTurns + " replies)");
+  if (u.unpricedTurns) costNotes.push(u.unpricedTurns + " unpriced");
+  if (!costNotes.length) costNotes.push(u.pricedTurns + " priced");
+  setSlot("sCost", cellHtml("Logged cost", "$" + u.cost.toFixed(2), costNotes.join(" · ")));
   setSlot("sTurns", cellHtml("Prompts · replies", data.userCount + " · " + data.assistantTurns, ""));
   setSlot("sErr", cellHtml("Tool errors", `<span class="${data.errors ? "err" : ""}">${data.errors}</span>`, ""));
   setSlot("sModel", cellHtml("Model", esc(cut((data.model || "").split("/").pop(), 28)), esc(data.thinking || ""), "sm clip"));
@@ -784,8 +787,10 @@ function setInfo(data) {
   const tools = Object.entries(data.toolCounts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => `<span>${esc(name)} ${count}</span>`).join("");
   const plans = data.plans.map((p) => { const t = p.done + p.pending + p.blocked, pct = t ? Math.round(p.done * 100 / t) : 0;
     return `<div class="planname"><span class="clip">${esc(p.name)}</span><span>${p.done}/${t}</span></div><div class="bar"><i style="width:${pct}%"></i></div>`; }).join("");
-  const costStatus = u.unpricedTurns ? `${u.unpricedTurns} replies have usage but no logged price` : `${u.pricedTurns} priced replies`;
-  setSlot("info", `<div class="kv"><div>Tokens</div><div>in ${fmtNum(u.input)} · out ${fmtNum(u.output)}</div><div>Cache</div><div>read ${fmtNum(u.cacheRead)} · write ${fmtNum(u.cacheWrite)}</div><div>Started</div><div>${data.startedAt ? esc(hms(Date.parse(data.startedAt))) : "—"}</div><div>Logged cost</div><div>$${u.cost.toFixed(2)} <span class="dim">(${esc(costStatus)})</span></div></div>${tools ? `<div class="chips">${tools}</div>` : ""}${plans}`);
+  const costStatus = [u.pricedTurns + " priced replies"];
+  if (u.estimatedTurns) costStatus.push(`+ $${u.estimatedCost.toFixed(2)} at list price over ${u.estimatedTurns} replies` + (u.estimatedUncachedTurns ? `; ${u.estimatedUncachedTurns} report no cache split, so this is an upper bound` : ""));
+  if (u.unpricedTurns) costStatus.push(`${u.unpricedTurns} replies have usage but no price or known rate`);
+  setSlot("info", `<div class="kv"><div>Tokens</div><div>in ${fmtNum(u.input)} · out ${fmtNum(u.output)}</div><div>Cache</div><div>read ${fmtNum(u.cacheRead)} · write ${fmtNum(u.cacheWrite)}</div><div>Started</div><div>${data.startedAt ? esc(hms(Date.parse(data.startedAt))) : "—"}</div><div>Logged cost</div><div>$${u.cost.toFixed(2)} <span class="dim">(${esc(costStatus.join("; "))})</span></div></div>${tools ? `<div class="chips">${tools}</div>` : ""}${plans}`);
 }
 
 const SOURCE_LABEL = { omp: "OMP", "claude-code": "Claude Code" };
