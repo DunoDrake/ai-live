@@ -73,9 +73,11 @@ Expected:
 ### Provider quota changes
 
 - Confirm `/api/providers` contains no token, credential or account fields.
-- Confirm Codex scans a bounded newest-file set and labels old evidence `stale`.
+- Confirm Codex prefers account usage, falls back to a bounded newest-file scan, and labels old fallback evidence `stale`.
 - Confirm Claude network/auth failures become `Unavailable` without failing other providers.
-- Confirm Antigravity/OMP stay explicit `Unavailable` until a readable source exists.
+- Confirm Antigravity CLI usage is requested server-side via local agy CLI and normalized to 5h and weekly windows.
+- Confirm Antigravity CLI failure becomes `Unavailable` without failing other providers.
+- Confirm OMP stays explicit `Unavailable` until a readable source exists.
 - Confirm provider refresh is cached for 60 seconds.
 
 ### Live Trace changes

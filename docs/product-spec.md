@@ -60,8 +60,9 @@ Display:
 ### 4.2.1 Provider quota
 
 - Display Codex, Claude, Antigravity and OMP in one compact provider row independent of the selected session.
-- Codex reads the newest bounded local `token_count.rate_limits` event.
+- Codex prefers the server-side account usage endpoint and falls back to the globally newest bounded local `token_count.rate_limits` event.
 - Claude usage is requested server-side from the Anthropic OAuth usage endpoint.
+- Antigravity usage is requested server-side from the local `agy` CLI usage command.
 - Browser payloads MUST contain only normalized quota windows, reset times, freshness and availability; credentials and raw provider responses MUST NOT leave the server.
 - Missing, unsupported or rejected sources display `Unavailable`; the UI MUST NOT fabricate quota values.
 - Data older than 15 minutes displays `stale`.

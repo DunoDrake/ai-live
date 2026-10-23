@@ -5,8 +5,10 @@
 ```mermaid
 flowchart LR
     J["OMP / Claude Code JSONL"] -->|incremental read| S["server.mjs\nparser + quota collectors"]
-    C["Codex JSONL rate-limit events"] -->|bounded newest-file scan| S
+    C["Codex account usage API"] -->|server-side fetch| S
+    F["Codex JSONL rate-limit events"] -->|bounded fallback scan| S
     A["Anthropic OAuth usage"] -->|server-side fetch| S
+    G["Antigravity CLI /usage"] -->|server-side child process| S
     P["<cwd>/docs/sessions/*-plan.md"] -->|read counts| S
     S -->|GET /api/sessions| B["index.html\nbrowser monitor"]
     S -->|GET /api/session?file=...| B

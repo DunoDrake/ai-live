@@ -5,6 +5,7 @@ import http from "node:http";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -17,6 +18,10 @@ const SESSION_ROOTS = [
 const CODEX_SESSION_ROOTS = [
 	path.join(os.homedir(), ".codex", "sessions"),
 	path.join(os.homedir(), "Library", "Application Support", "Orca", "codex-runtime-home", "home", "sessions"),
+];
+const CODEX_AUTH_FILES = [
+	path.join(os.homedir(), ".codex", "auth.json"),
+	path.join(os.homedir(), "Library", "Application Support", "Orca", "codex-runtime-home", "home", "auth.json"),
 ];
 const CLAUDE_CREDENTIALS_FILE = process.env.CLAUDE_CREDENTIALS_FILE || path.join(os.homedir(), ".claude", ".credentials.json");
 const PROVIDER_CACHE_MS = 60000;
@@ -411,7 +416,8 @@ function newestFiles(root, limit) {
 	return files.sort((left, right) => right.mtime - left.mtime).slice(0, limit);
 }
 
-function codexQuota() {
+function codexTranscriptQuota() {
+	let latest = null;
 	for (const root of CODEX_SESSION_ROOTS) {
 		for (const item of newestFiles(root, 12)) {
 			const lines = fs.readFileSync(item.file, "utf8").trim().split("\n").slice(-300).reverse();
@@ -420,11 +426,40 @@ function codexQuota() {
 				try { entry = JSON.parse(line); } catch { continue; }
 				const limits = entry.type === "event_msg" && entry.payload && entry.payload.type === "token_count" ? entry.payload.rate_limits : null;
 				if (!limits || (!limits.primary && !limits.secondary)) continue;
-				return { id:"codex", label:"Codex", status:"available", source:"local transcript", updatedAt:Date.parse(entry.timestamp) || item.mtime, session:quotaWindow(limits.primary, 300), weekly:quotaWindow(limits.secondary, 10080) };
+				const updatedAt = Date.parse(entry.timestamp) || item.mtime;
+				if (!latest || updatedAt > latest.updatedAt) latest = { id:"codex", label:"Codex", status:"available", source:"local transcript", updatedAt, session:quotaWindow(limits.primary, 300), weekly:quotaWindow(limits.secondary, 10080) };
+				break;
 			}
 		}
 	}
-	return { id:"codex", label:"Codex", status:"unavailable", source:"local transcript", updatedAt:0, reason:"No rate-limit event found", session:null, weekly:null };
+	return latest || { id:"codex", label:"Codex", status:"unavailable", source:"local transcript", updatedAt:0, reason:"No rate-limit event found", session:null, weekly:null };
+}
+
+function codexToken() {
+	for (const file of CODEX_AUTH_FILES) {
+		try {
+			const auth = JSON.parse(fs.readFileSync(file, "utf8"));
+			if (auth.tokens && auth.tokens.access_token) return auth.tokens.access_token;
+		} catch { /* try next local profile */ }
+	}
+	return "";
+}
+
+function codexApiWindow(raw) {
+	if (!raw || !Number.isFinite(raw.used_percent)) return null;
+	return quotaWindow({ used_percent:raw.used_percent, window_minutes:Number.isFinite(raw.limit_window_seconds) ? raw.limit_window_seconds / 60 : null, resets_at:raw.reset_at }, null);
+}
+
+async function codexQuota() {
+	const token = codexToken();
+	if (!token) return codexTranscriptQuota();
+	try {
+		const response = await fetch("https://chatgpt.com/backend-api/wham/usage", { headers:{ authorization:"Bearer " + token, accept:"application/json" }, signal:AbortSignal.timeout(8000) });
+		if (!response.ok) return codexTranscriptQuota();
+		const usage = await response.json();
+		const limits = usage.rate_limit || {};
+		return { id:"codex", label:"Codex", status:"available", source:"Codex account API", updatedAt:Date.now(), session:codexApiWindow(limits.primary_window), weekly:codexApiWindow(limits.secondary_window) };
+	} catch { return codexTranscriptQuota(); }
 }
 
 function claudeToken() {
@@ -450,11 +485,112 @@ async function claudeQuota() {
 	} catch { return { id:"claude", label:"Claude", status:"unavailable", source:"Anthropic OAuth", updatedAt:Date.now(), reason:"Usage request failed", session:null, weekly:null }; }
 }
 
+const AGY_BIN_CANDIDATES = [
+	path.join(os.homedir(), ".local", "bin", "agy"),
+	"/opt/homebrew/bin/agy",
+	"/usr/local/bin/agy",
+];
+
+function findAgyBin() {
+	for (const candidate of AGY_BIN_CANDIDATES) {
+		try {
+			if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+		} catch { /* try next candidate */ }
+	}
+	return "agy";
+}
+
+function antigravityBucketWindow(bucket, fallbackMinutes) {
+	if (!bucket || !Number.isFinite(bucket.remaining_fraction)) return null;
+	const remainingPercent = Math.max(0, Math.min(100, bucket.remaining_fraction * 100));
+	const usedPercent = Math.max(0, Math.min(100, 100 - remainingPercent));
+	const resetsAt = bucket.reset_time ? Date.parse(bucket.reset_time) : null;
+	return {
+		usedPercent,
+		remainingPercent,
+		windowMinutes: fallbackMinutes,
+		resetsAt: Number.isFinite(resetsAt) ? resetsAt : null,
+	};
+}
+
+function antigravityQuota() {
+	const agyBin = findAgyBin();
+	return new Promise((resolve) => {
+		const env = {
+			...process.env,
+			HOME: process.env.HOME || os.homedir(),
+			PATH: [
+				path.join(os.homedir(), ".local", "bin"),
+				process.env.PATH || "",
+				"/opt/homebrew/bin",
+				"/usr/local/bin",
+				"/usr/bin",
+				"/bin",
+			].filter(Boolean).join(":"),
+		};
+		execFile(agyBin, ["-p", "/usage", "--output-format", "json"], { env, timeout: 15000 }, (err, stdout) => {
+			if (err || !stdout) {
+				return resolve({
+					id: "antigravity",
+					label: "Antigravity",
+					status: "unavailable",
+					source: "local CLI",
+					updatedAt: 0,
+					reason: err ? (err.killed ? "CLI timeout" : "CLI unavailable") : "Empty response",
+					session: null,
+					weekly: null,
+				});
+			}
+			try {
+				const data = JSON.parse(stdout);
+				const groups = (data.command && data.command.data && Array.isArray(data.command.data.groups))
+					? data.command.data.groups
+					: [];
+				if (!groups.length) {
+					return resolve({
+						id: "antigravity",
+						label: "Antigravity",
+						status: "unavailable",
+						source: "local CLI",
+						updatedAt: Date.now(),
+						reason: "No quota groups returned",
+						session: null,
+						weekly: null,
+					});
+				}
+				const geminiGroup = groups.find((g) => g.name === "Gemini Models") || groups[0];
+				const buckets = Array.isArray(geminiGroup.buckets) ? geminiGroup.buckets : [];
+				const sessionBucket = buckets.find((b) => b.window === "5h" || (b.id && b.id.includes("5h")));
+				const weeklyBucket = buckets.find((b) => b.window === "weekly" || (b.id && b.id.includes("weekly")));
+				return resolve({
+					id: "antigravity",
+					label: "Antigravity",
+					status: "available",
+					source: "local CLI",
+					updatedAt: Date.now(),
+					session: antigravityBucketWindow(sessionBucket, 300),
+					weekly: antigravityBucketWindow(weeklyBucket, 10080),
+				});
+			} catch {
+				return resolve({
+					id: "antigravity",
+					label: "Antigravity",
+					status: "unavailable",
+					source: "local CLI",
+					updatedAt: 0,
+					reason: "Malformed quota response",
+					session: null,
+					weekly: null,
+				});
+			}
+		});
+	});
+}
+
 async function providerQuotas() {
 	if (providerCache.value && Date.now() - providerCache.at < PROVIDER_CACHE_MS) return providerCache.value;
 	if (providerCache.pending) return providerCache.pending;
-	providerCache.pending = Promise.all([Promise.resolve(codexQuota()), claudeQuota()]).then((providers) => {
-		providers.push({ id:"antigravity", label:"Antigravity", status:"unavailable", source:"local CLI", updatedAt:0, reason:"No readable quota source", session:null, weekly:null });
+	providerCache.pending = Promise.all([codexQuota(), claudeQuota(), antigravityQuota()]).then((providers) => {
 		providers.push({ id:"omp", label:"OMP", status:"unavailable", source:"session JSONL", updatedAt:0, reason:"Provider quota not emitted", session:null, weekly:null });
 		for (const provider of providers) provider.stale = provider.updatedAt > 0 && Date.now() - provider.updatedAt > PROVIDER_STALE_MS;
 		providerCache = { at:Date.now(), value:{ now:Date.now(), providers }, pending:null };
@@ -498,4 +634,7 @@ http.createServer((req, res) => {
 	if (url.pathname.startsWith("/api/")) return void handleApi(url, res);
 	res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
 	res.end(fs.readFileSync(path.join(HERE, "index.html")));
-}).listen(PORT, "127.0.0.1", () => console.log("AI Live viewer: http://127.0.0.1:" + PORT));
+}).listen(PORT, "127.0.0.1", () => {
+	console.log("AI Live viewer: http://127.0.0.1:" + PORT);
+	void providerQuotas();
+});
