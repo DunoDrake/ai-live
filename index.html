@@ -34,10 +34,14 @@ ul { list-style:none; }
 @keyframes spin { to { transform:rotate(360deg); } }
 @keyframes pop { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
 
-.app { min-height:100vh; display:grid; grid-template-rows:auto auto minmax(420px,1fr) auto; gap:12px; padding:12px 16px; max-width:1920px; margin-inline:auto; }
+.app { min-height:100vh; display:grid; grid-template-rows:auto auto auto auto; gap:12px; padding:12px 16px; max-width:1920px; margin-inline:auto; }
 .panel { background:var(--panel); border:1px solid var(--pb); border-left:2px solid var(--accent); border-radius:3px; backdrop-filter:blur(12px); min-width:0; min-height:0; display:flex; flex-direction:column; }
 .hd { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:9px 12px; border-bottom:1px solid var(--pb); font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); flex:none; }
 .hd em { font-style:normal; text-transform:none; letter-spacing:0; color:var(--run); }
+.hd-actions { display:flex; align-items:center; justify-content:flex-end; gap:10px; min-width:0; }
+.hd-actions em { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.expand-btn { color:var(--run); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+.expand-btn:hover { color:var(--text); }
 .hd span::before { content:""; display:inline-block; width:2px; height:10px; background:var(--accent); margin-right:8px; vertical-align:-1px; }
 .bd { padding:12px; overflow:auto; min-height:0; flex:1 1 auto; }
 
@@ -62,14 +66,26 @@ header.top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-
 .cell .v.sm { font-size:13px; font-weight:500; line-height:1.55; }
 .cell .s { font-size:11px; color:var(--dim); min-height:1.45em; }
 .v b.tool { color:var(--run); font-weight:600; }
+.providers { display:flex; flex-direction:row; align-items:stretch; min-width:0; min-height:68px; max-height:84px; overflow-x:auto; overflow-y:hidden; flex:none; }
+.provider-card { flex:1 0 220px; min-width:220px; padding:8px 12px; border-left:1px solid var(--pb); }
+.provider-card:first-child { border-left:0; }
+.provider-head,.provider-line { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.provider-name { font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+.provider-state { font-size:10px; color:var(--dim); }
+.provider-line { margin-top:3px; font-size:12px; }
+.provider-line b { font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; }
+.provider-card.warn .provider-line b { color:var(--cloud-stroke); }
+.provider-card.bad .provider-line b { color:var(--err); }
+.provider-card.unavailable .provider-line { color:var(--dim); }
+.provider-card.stale .provider-state { color:var(--cloud-stroke); }
 .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:8px; background:var(--dim); vertical-align:1px; flex:none; }
 .dot.w { background:var(--ok); box-shadow:0 0 8px var(--ok); animation:pulse 1.4s ease-in-out infinite; }
 .dot.i { background:var(--cloud-stroke); } .dot.e { background:var(--dim); } .dot.a { background:var(--run); }
 
 .main { display:grid; gap:12px; grid-template-columns:minmax(0,1fr); min-height:0; }
-.col { min-height:0; }
+.col { min-height:0; height:300px; }
 #flow { min-width:0; flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow:hidden; min-height:0; }
-.flowcol .bd { display:flex; flex-direction:column; min-height:0; overflow-y:auto; }
+.flowcol .bd { display:flex; flex-direction:column; min-height:0; overflow:hidden; padding:8px 12px; }
 .flowsvg { width:100%; max-width:100%; max-height:100%; height:auto; display:block; margin-inline:auto; overflow:visible; }
 .flowsvg text { font-family:inherit; dominant-baseline:middle; fill:var(--text); }
 .flowsvg .node { cursor:pointer; transform-box:fill-box; transform-origin:center; transition:opacity .3s ease; }
@@ -116,13 +132,11 @@ header.top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-
 .flow-caption i { display:inline-block; width:22px; height:0; border-top:2px solid var(--muted); vertical-align:middle; margin-right:6px; }
 .flow-caption i.d { border-top-style:dashed; }
 
-.detail-panel { margin-top:12px; border:1px solid var(--pb); border-radius:5px; padding:10px 12px; min-width:0; background:var(--row); }
+.detail-panel { border:1px solid var(--pb); border-radius:5px; padding:10px 12px; min-width:0; background:var(--row); }
 .detail-top { display:flex; justify-content:space-between; align-items:center; gap:12px; }
 .detail-top h3 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:500; }
-.detail-toggle { color:var(--run); font-size:12px; white-space:nowrap; }
 .detail-summary { color:var(--muted); font-size:12px; margin-top:4px; overflow-wrap:anywhere; }
-.detail-panel:not(.collapsed) .detail-summary, .detail-panel.collapsed .stage-detail { display:none; }
-.detail-panel .stage-detail { padding-top:8px; max-height:210px; overflow-y:auto; }
+.detail-panel .stage-detail { padding-top:8px; max-height:260px; overflow-y:auto; }
 .stage-detail h3 { font-size:13px; margin-bottom:4px; }
 .stage-detail p, .stage-detail small { font-size:11.5px; color:var(--muted); line-height:1.45; }
 .stage-detail ol { list-style:none; display:grid; gap:6px; margin-top:10px; counter-reset:step; }
@@ -158,12 +172,23 @@ header.top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-
 .tracebd { display:flex; flex-direction:column; padding:0; overflow:hidden; min-height:0; flex:1 1 auto; }
 .trace-truth { padding:8px 12px; border-bottom:1px solid var(--pb); color:var(--muted); font-size:11px; flex:none; background:var(--row); }
 .trace-truth b { color:var(--ok); font-weight:600; }
-.trace-graph-wrap { min-width:0; flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow:hidden; padding:16px 12px; min-height:0; }
-#traceGraph { width:100%; min-width:0; }
+.trace-graph-wrap { min-width:0; flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow:hidden; padding:8px 12px; min-height:0; }
+#traceGraph { width:100%; min-width:0; max-height:210px; display:flex; align-items:center; }
 .trace-graph .edge { marker-end:url(#traceArrow); }
 .trace-graph .edge.live { marker-end:url(#traceArrowOn); }
 .trace-graph .node { cursor:default; }
 
+.diagram-modal { position:fixed; inset:0; z-index:45; display:grid; place-items:center; padding:3vh 3vw; background:rgba(2,6,14,.74); backdrop-filter:blur(4px); }
+.diagram-modal[hidden] { display:none; }
+.diagram-panel { width:min(1180px,100%); height:min(760px,94vh); }
+.diagram-stage { flex:1 1 auto; min-height:0; display:grid; grid-template-columns:minmax(0,1.65fr) minmax(280px,.75fr); gap:12px; padding:12px; overflow:hidden; }
+.diagram-canvas { min-width:0; min-height:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.diagram-canvas .flowsvg { width:100%; height:100%; max-height:100%; }
+.diagram-canvas .flow-caption { display:none; }
+.diagram-detail { min-width:0; min-height:0; overflow:auto; }
+.diagram-panel.trace-only .diagram-stage { grid-template-columns:minmax(0,1fr); }
+.diagram-panel.trace-only .diagram-detail { display:none; }
+.diagram-panel.trace-only .diagram-canvas .flowsvg { max-width:1000px; max-height:520px; }
 .gov { position:fixed; inset:0; z-index:50; display:grid; place-items:center; padding:2vh 2vw; background:rgba(2,6,14,.74); backdrop-filter:blur(4px); }
 .gov[hidden] { display:none; }
 .gpanel { width:min(1180px,100%); height:min(840px,100%); }
@@ -226,13 +251,13 @@ header.top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-
 .planname { display:flex; justify-content:space-between; gap:8px; font-size:12px; margin-top:8px; } .planname span:last-child { color:var(--muted); }
 
 @media (min-width:1100px) {
-  .app { height:100vh; grid-template-rows:auto auto minmax(0,1fr) 210px; }
+  .app { min-height:100vh; }
   .main { grid-template-columns:repeat(3, minmax(0, 1fr)); }
   .bottom { grid-template-columns:1.05fr 1.25fr 1.2fr 1fr; }
 }
 @media (max-width:1099px) {
   .main { grid-template-columns:minmax(0, 1fr); }
-  .main .col { height:400px; }
+  .main .col { height:300px; }
   .bottom { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .strip { grid-template-columns:1fr minmax(240px,2fr) 1fr 1fr; }
   .strip .cell:nth-child(n+5) { border-top:1px solid var(--pb); }
@@ -246,6 +271,12 @@ header.top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-
   .strip .cell:nth-child(5) { border-left:0; }
   .strip .cell.c-model { grid-column:span 2; }
   .row { grid-template-columns:16px 58px minmax(0,1fr) 48px; } .row .tn { display:none; } .cell { padding:7px 10px; }
+  .diagram-modal { padding:10px; }
+  .diagram-panel { height:calc(100vh - 20px); }
+  .diagram-stage { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(260px,1fr) auto; overflow:auto; }
+  .diagram-detail { overflow:visible; }
+  .providers { max-height:96px; }
+  .provider-card { flex-basis:250px; }
 }
 @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
 </style>
@@ -263,12 +294,12 @@ header.top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-
     <div class="cell" id="sCost"></div><div class="cell" id="sTurns"></div><div class="cell" id="sErr"></div><div class="cell c-model" id="sModel"></div>
   </section>
 
+  <section class="panel providers" id="providers" aria-label="Provider quota"><div class="provider-card unavailable"><div class="provider-head"><span class="provider-name">Provider quota</span><span class="provider-state">loading</span></div><div class="provider-line">Loading local providers…</div></div></section>
+
   <main class="main" id="main">
-    <section class="panel col flowcol"><div class="hd"><span>Agent workflow</span><em id="loopNote"></em></div>
-      <div class="bd"><div id="flow"></div>
-        <div id="detailPanel" class="detail-panel"><div class="detail-top"><h3 id="detailTitle">Context</h3><button id="detailToggle" class="detail-toggle" type="button" aria-expanded="true" aria-controls="stageDetail">Minimize −</button></div><div id="detailSummary" class="detail-summary"></div><div id="stageDetail" class="stage-detail"></div></div>
-      </div></section>
-    <section class="panel col tracecol"><div class="hd"><span>Live trace</span><em id="traceMeta"></em></div>
+    <section class="panel col flowcol"><div class="hd"><span>Agent workflow</span><div class="hd-actions"><em id="loopNote"></em><button class="expand-btn" id="workflowExpand" type="button" aria-haspopup="dialog">Expand ↗</button></div></div>
+      <div class="bd"><div id="flow"></div></div></section>
+    <section class="panel col tracecol"><div class="hd"><span>Live trace</span><div class="hd-actions"><em id="traceMeta"></em><button class="expand-btn" id="traceExpand" type="button" aria-haspopup="dialog">Expand ↗</button></div></div>
       <div class="bd tracebd"><div class="trace-truth"><b>Observed JSONL only</b> · tool lifecycle grouped</div><div class="trace-graph-wrap"><div id="traceGraph"></div></div><p class="flow-caption"><span><i></i>observed in session data</span></p></div></section>
     <section class="panel col toolscol"><div class="hd"><span>Tool calls</span><em id="toolMeta"></em></div><div class="filters" id="toolFilters"></div><ul class="rows" id="toolList"></ul></section>
   </main>
@@ -279,6 +310,16 @@ header.top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-
     <div class="panel"><div class="hd"><span>Todo</span></div><div class="bd" id="phases"></div></div>
     <div class="panel"><div class="hd"><span>Session</span></div><div class="bd" id="info"></div></div>
   </section>
+</div>
+
+<div class="diagram-modal" id="diagramModal" role="dialog" aria-modal="true" aria-labelledby="diagramHeading" hidden>
+  <div class="panel diagram-panel" id="diagramPanel">
+    <div class="hd"><span id="diagramHeading">Diagram</span><button class="tbtn" id="diagramClose" type="button">Close ✕</button></div>
+    <div class="diagram-stage">
+      <div class="diagram-canvas" id="diagramCanvas"></div>
+      <div class="diagram-detail" id="diagramDetail"></div>
+    </div>
+  </div>
 </div>
 
 <div class="gov" id="guides" role="dialog" aria-modal="true" aria-labelledby="gHeading" hidden>
@@ -301,6 +342,7 @@ let lastEventIds = new Set();
 let toolFilter = "all";
 let sessionRows = [];
 let currentSession = null;
+let providerSnapshot = null;
 const esc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
 const fmtMs = (ms) => ms == null ? "" : ms < 1000 ? ms + "ms" : (ms / 1000).toFixed(1) + "s";
 const fmtNum = (n) => n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n);
@@ -389,7 +431,7 @@ function loopCircle(mobile) {
     : workflowNode({ key: "context", x: 180, y: 160 }) + workflowNode({ key: "tool", x: 440, y: 50 }) + workflowNode({ key: "model", x: 440, y: 160 }) + workflowNode({ key: "verify", x: 440, y: 270 }) + workflowNode({ key: "output", x: 700, y: 270 });
   const viewBox = mobile ? "0 0 380 680" : "0 -26 850 366";
   const defs = `<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 1 10 5 0 9z"/></marker><marker id="arrLive" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 1 10 5 0 9z"/></marker></defs>`;
-  return `<svg viewBox="${viewBox}" class="flowsvg" aria-label="Context to Model; Model and Tool exchange; inferred Model and Verify exchange; inferred Verify to Output.">${defs}<g class="flow-edges">${edges}${pulses}</g><g class="flow-nodes">${nodes}</g></svg><p class="flow-caption"><span><i></i>observed in session data</span><span><i class="d"></i>inferred or schematic</span></p>`;
+  return `<svg viewBox="${viewBox}" class="flowsvg" aria-label="Context to Model; Model and Tool exchange; inferred Model and Verify exchange; inferred Verify to Output.">${defs}<g class="flow-edges">${edges}${pulses}</g><g class="flow-nodes">${nodes}</g></svg>`;
 }
 
 let previousWorkflowStation = "";
@@ -496,28 +538,16 @@ function stageSummary(stage, data) {
   return data.lastRole === "assistantText" ? "Output · latest reply observed" : "Output · no recent reply observed";
 }
 
-function setDetailCollapsed(collapsed) {
-  $("detailPanel").classList.toggle("collapsed", collapsed);
-  $("detailToggle").textContent = collapsed ? "Expand +" : "Minimize −";
-  $("detailToggle").setAttribute("aria-expanded", String(!collapsed));
-}
-
 function showStage(stage, data) {
   selectedStage = stage;
-  $("detailTitle").textContent = stage.charAt(0).toUpperCase() + stage.slice(1);
-  $("detailSummary").textContent = stageSummary(stage, data);
-  const detail = $("stageDetail");
-  const html = stageDetail(stage, data);
-  if (slotCache.get("stageDetail") !== html) {
-    const scroll = detail.scrollTop;
-    setSlot("stageDetail", html);
-    detail.scrollTop = scroll;
-  }
-  $("flow").querySelectorAll("[data-stage]").forEach((node) => node.classList.toggle("selected", node.dataset.stage === stage));
+  if ($("diagramModal").hidden || $("diagramPanel").classList.contains("trace-only")) return;
+  $("diagramDetail").innerHTML = `<div class="detail-panel"><div class="detail-top"><h3>${esc(stage.charAt(0).toUpperCase() + stage.slice(1))}</h3></div><div class="detail-summary">${esc(stageSummary(stage, data))}</div><div class="stage-detail" id="stageDetail">${stageDetail(stage, data)}</div></div>`;
+  $("diagramCanvas").querySelectorAll("[data-stage]").forEach((node) => node.classList.toggle("selected", node.dataset.stage === stage));
+  updateContextSequence();
 }
 function updateContextSequence() {
   const detail = $("stageDetail");
-  if (selectedStage !== "context" || !currentSession) return;
+  if (!detail || selectedStage !== "context" || !currentSession) return;
   const step = contextStep(currentSession);
   detail.querySelectorAll("li").forEach((item, index) => item.classList.toggle("simulated", index === step));
   const status = detail.querySelector(".detail-status");
@@ -555,6 +585,42 @@ function setStrip(data) {
   setSlot("sTurns", cellHtml("Prompts · replies", data.userCount + " · " + data.assistantTurns, ""));
   setSlot("sErr", cellHtml("Tool errors", `<span class="${data.errors ? "err" : ""}">${data.errors}</span>`, ""));
   setSlot("sModel", cellHtml("Model", esc(cut((data.model || "").split("/").pop(), 28)), esc(data.thinking || ""), "sm clip"));
+}
+function quotaTone(provider) {
+  const values = [provider.session, provider.weekly].filter(Boolean).map((window) => window.remainingPercent);
+  const lowest = values.length ? Math.min.apply(null, values) : 100;
+  return provider.status !== "available" ? "unavailable" : lowest < 20 ? "bad" : lowest < 50 ? "warn" : "";
+}
+
+function resetText(resetAt) {
+  if (!resetAt) return "reset unknown";
+  const date = new Date(resetAt);
+  return date.toLocaleDateString("en-GB", { weekday:"short" }) + " " + date.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
+}
+
+function quotaLine(label, window) {
+  if (!window) return "";
+  return `<div class="provider-line"><span>${label}</span><b>${Math.round(window.remainingPercent)}% left</b><span>${esc(resetText(window.resetsAt))}</span></div>`;
+}
+
+function renderProviders(data) {
+  providerSnapshot = data;
+  const cards = data.providers.map((provider) => {
+    const classes = ["provider-card", quotaTone(provider), provider.stale ? "stale" : ""].filter(Boolean).join(" ");
+    const state = provider.stale ? "stale" : provider.status === "available" ? "updated " + fmtAgo(data.now - provider.updatedAt) + " ago" : "unavailable";
+    const body = provider.status === "available"
+      ? quotaLine("5h", provider.session) + quotaLine("Week", provider.weekly)
+      : `<div class="provider-line"><span>${esc(provider.reason || "Quota unavailable")}</span></div>`;
+    return `<article class="${classes}"><div class="provider-head"><span class="provider-name">${esc(provider.label)}</span><span class="provider-state">${esc(state)}</span></div>${body}</article>`;
+  }).join("");
+  setSlot("providers", cards || `<div class="provider-card unavailable"><div class="provider-line">No providers detected</div></div>`);
+}
+
+async function refreshProviders() {
+  try {
+    const response = await fetch("/api/providers");
+    if (response.ok) renderProviders(await response.json());
+  } catch { /* server restarting */ }
 }
 
 function toolRows(data) {
@@ -690,6 +756,12 @@ function setActivity(data) {
   if ($("traceMeta")) $("traceMeta").textContent = "observed workflow · " + data.trace.length + " events";
   setToolList(data);
 }
+function syncExpandedDiagram() {
+  if (!expandedDiagram || $("diagramModal").hidden) return;
+  const source = expandedDiagram === "workflow" ? $("flow") : $("traceGraph");
+  $("diagramCanvas").innerHTML = source.innerHTML;
+  if (expandedDiagram === "workflow") showStage(selectedStage || "context", currentSession);
+}
 function phaseFlow(data) {
   if (!data.todo || !data.todo.length) return `<div class="mut">No todo in this session yet.</div>`;
   const firstOpen = data.todo.findIndex((p) => p.tasks.some((t) => t.status !== "completed"));
@@ -733,9 +805,8 @@ function render(data) {
   if (!selectedStage || (active && active !== lastAutoStage && selectedStage === lastAutoStage)) selectedStage = active || "context";
   lastAutoStage = active;
   renderWorkflow(data);
-  showStage(selectedStage, data);
-  updateContextSequence();
   setActivity(data);
+  syncExpandedDiagram();
   setConversation(data);
   setSlot("phases", phaseFlow(data));
   setInfo(data);
@@ -792,11 +863,32 @@ $("toolFilters").addEventListener("click", (event) => {
   toolFilter = button.dataset.filter;
   setToolList(currentSession);
 });
+let expandedDiagram = "";
+let diagramReturnFocus = null;
+function openDiagram(kind) {
+  if (!currentSession) return;
+  expandedDiagram = kind;
+  diagramReturnFocus = kind === "workflow" ? $("workflowExpand") : $("traceExpand");
+  $("diagramHeading").textContent = kind === "workflow" ? "Agent workflow" : "Live trace";
+  $("diagramPanel").classList.toggle("trace-only", kind === "trace");
+  const source = kind === "workflow" ? $("flow") : $("traceGraph");
+  $("diagramCanvas").innerHTML = source.innerHTML;
+  $("diagramDetail").innerHTML = "";
+  $("diagramModal").hidden = false;
+  document.querySelector(".app").inert = true;
+  if (kind === "workflow") showStage(selectedStage || "context", currentSession);
+  $("diagramClose").focus();
+}
+function closeDiagram() {
+  $("diagramModal").hidden = true;
+  document.querySelector(".app").inert = false;
+  expandedDiagram = "";
+  if (diagramReturnFocus) diagramReturnFocus.focus();
+}
 function pickStage(node) {
   if (!node || !currentSession) return;
-  setDetailCollapsed(false);
+  if ($("diagramModal").hidden) openDiagram("workflow");
   showStage(node.dataset.stage, currentSession);
-  updateContextSequence();
 }
 $("flow").addEventListener("click", (event) => pickStage(event.target.closest("[data-stage]")));
 $("flow").addEventListener("keydown", (event) => {
@@ -806,12 +898,28 @@ $("flow").addEventListener("keydown", (event) => {
   event.preventDefault();
   pickStage(node);
 });
-$("detailToggle").addEventListener("click", () => setDetailCollapsed(!$("detailPanel").classList.contains("collapsed")));
-setDetailCollapsed(true);
-$("stageDetail").addEventListener("click", (event) => {
+$("diagramCanvas").addEventListener("click", (event) => {
+  const node = event.target.closest("[data-stage]");
+  if (node) showStage(node.dataset.stage, currentSession);
+});
+$("diagramCanvas").addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const node = event.target.closest("[data-stage]");
+  if (!node) return;
+  event.preventDefault();
+  showStage(node.dataset.stage, currentSession);
+});
+$("diagramDetail").addEventListener("click", (event) => {
   if (event.target.id !== "replayContext") return;
   contextReplayStartedAt = Date.now();
   updateContextSequence();
+});
+$("workflowExpand").addEventListener("click", () => openDiagram("workflow"));
+$("traceExpand").addEventListener("click", () => openDiagram("trace"));
+$("diagramClose").addEventListener("click", closeDiagram);
+$("diagramModal").addEventListener("click", (event) => { if (event.target === $("diagramModal")) closeDiagram(); });
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("diagramModal").hidden) closeDiagram();
 });
 setInterval(() => {
   if (!currentSession) return;
@@ -1045,8 +1153,10 @@ themeBtn.addEventListener("click", () => applyTheme(document.documentElement.dat
 applyTheme(document.documentElement.dataset.theme);
 tickClock(); setInterval(tickClock, 1000);
 refreshSessions().then(tick);
+refreshProviders();
 setInterval(tick, 300);
 setInterval(refreshSessions, 4000);
+setInterval(refreshProviders, 60000);
 </script>
 </body>
 </html>

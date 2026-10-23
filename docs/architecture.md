@@ -4,12 +4,14 @@
 
 ```mermaid
 flowchart LR
-    J["~/.omp/agent/sessions/<workspace>/*.jsonl"] -->|incremental read| S["server.mjs\nparser + in-memory cache"]
+    J["OMP / Claude Code JSONL"] -->|incremental read| S["server.mjs\nparser + quota collectors"]
+    C["Codex JSONL rate-limit events"] -->|bounded newest-file scan| S
+    A["Anthropic OAuth usage"] -->|server-side fetch| S
     P["<cwd>/docs/sessions/*-plan.md"] -->|read counts| S
     S -->|GET /api/sessions| B["index.html\nbrowser monitor"]
     S -->|GET /api/session?file=...| B
+    S -->|GET /api/providers| B
     S -->|GET /*| H["index.html"]
-```
 
 No edge writes back to JSONL or plan files.
 
@@ -25,6 +27,7 @@ Dependency-free Node HTTP server responsible for:
 - Deriving bounded events, pending calls, usage, todo and status.
 - Reading `*-plan.md` checkbox counts from the selected session's workspace.
 - Serving JSON APIs and `index.html`.
+- Normalizing provider quota without returning credentials or raw provider responses.
 
 ### `index.html`
 
@@ -47,6 +50,7 @@ External runtime dependency: Google Fonts for JetBrains Mono. The system fallbac
 |---|---|---|
 | `OMP_SESSIONS_DIR` | `~/.omp/agent/sessions` | Root containing one directory level of workspace/session groups and JSONL files |
 | `PORT` | `4873` | HTTP port; server still binds only to `127.0.0.1` |
+| `CLAUDE_CREDENTIALS_FILE` | `~/.claude/.credentials.json` | Optional Claude OAuth credential file read only by the server |
 
 Internal bounds:
 
@@ -148,6 +152,10 @@ lastRole, events, trace, tasks, plans
 ```
 
 Returns `404 {"error":"no session found"}` when no valid session resolves. Other paths return `index.html`.
+
+### `GET /api/providers`
+
+Returns `{ now, providers }`. Each provider contains `id`, `label`, `status`, `source`, `updatedAt`, `stale`, optional bounded `reason`, and normalized `session`/`weekly` windows. A window contains `usedPercent`, `remainingPercent`, `windowMinutes`, and `resetsAt` in milliseconds. Access tokens, account identifiers and raw responses are never returned.
 
 ## 10. File request safety
 

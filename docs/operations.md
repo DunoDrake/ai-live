@@ -50,7 +50,7 @@ machine — no build step, no `npm install`. Requires only Node.js on that machi
 curl -i http://127.0.0.1:4873/
 curl -s http://127.0.0.1:4873/api/sessions
 curl -s http://127.0.0.1:4873/api/session
-```
+curl -s http://127.0.0.1:4873/api/providers
 
 Expected:
 
@@ -69,6 +69,14 @@ Expected:
 - Confirm pending call resolves to duration/error state.
 - Confirm an invalid/outside `file` query does not resolve.
 - Inspect the API payload, not only UI rendering.
+
+### Provider quota changes
+
+- Confirm `/api/providers` contains no token, credential or account fields.
+- Confirm Codex scans a bounded newest-file set and labels old evidence `stale`.
+- Confirm Claude network/auth failures become `Unavailable` without failing other providers.
+- Confirm Antigravity/OMP stay explicit `Unavailable` until a readable source exists.
+- Confirm provider refresh is cached for 60 seconds.
 
 ### Live Trace changes
 
@@ -144,6 +152,8 @@ Verification may use direct Chrome DevTools Protocol against a locally launched 
 ## 6. Data and privacy
 
 The monitor displays local prompt/reply text, tool arguments, filesystem paths, model data, costs and todos. Treat screenshots and exports as potentially sensitive. The server performs no redaction.
+
+Provider credentials remain server-side. `/api/providers` exposes only normalized percentages, reset times, freshness and bounded failure reasons. Claude quota requires a currently valid OAuth access token; AI Live does not refresh or persist credentials.
 
 ## 7. Release and git
 

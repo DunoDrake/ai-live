@@ -4,9 +4,10 @@
 
 1. Header: product identity, selected session, workspace/model, clock, Guides and theme.
 2. Status strip: seven compact operational metrics.
-3. Main: Three balanced equal-width panels: Agent Workflow, Live Trace (observed workflow graph), and Tool Calls (filterable recent executions).
-4. Bottom: Sessions, Conversation, Todo and Session metadata.
-5. Modal layer: Process Guides.
+3. Provider quota: compact Codex, Claude, Antigravity and OMP cards with freshness.
+4. Main: Three equal-width compact panels: Agent Workflow, Live Trace (observed workflow graph), and Tool Calls (filterable recent executions).
+5. Bottom: Sessions, Conversation, Todo and Session metadata.
+6. Modal layer: expanded Agent Workflow/Live Trace and Process Guides.
 
 The monitor SHOULD prioritize current work above history. Panels use their own scrolling instead of expanding desktop document height.
 
@@ -18,6 +19,14 @@ The monitor SHOULD prioritize current work above history. Panels use their own s
 - Accent: dark `#b6ff6a`; light `#4d7c0f`.
 - Status colors remain semantically independent: success, running and error.
 - Selected controls use solid accent; selection MUST NOT imply runtime activity.
+
+## 2.1 Provider quota states
+
+- Available windows show `remainingPercent` and reset time; 5h and weekly windows are independent.
+- Lowest remaining value below 50% uses warning color; below 20% uses error color.
+- Values older than 15 minutes show `stale` and retain their last observed value.
+- Unsupported, missing or rejected sources show `Unavailable` plus a bounded reason.
+- Desktop cards share one row. Mobile cards retain one row in an internal horizontal scroller.
 
 ## 3. Agent Workflow topology
 
@@ -53,9 +62,10 @@ When the session is not working, no node is active.
 
 ## 5. Workflow interaction
 
-- Click, Enter or Space selects a node and expands its detail.
+- Dashboard previews remain compact. `Expand` or selecting a workflow node opens the full diagram overlay.
+- Click, Enter or Space on a workflow node opens the overlay and selects that node.
 - Manual selection persists until a genuinely changed auto-active stage supersedes the previously auto-selected stage.
-- Detail starts collapsed but never disappears; collapsed state shows selected-stage summary.
+- Workflow detail exists only in the expanded overlay; the dashboard does not reserve vertical space for it.
 - Context detail lists six conceptual inputs and has `Replay illustration`.
 - Replay advances one step per 750 ms and MUST be labeled illustrative.
 - Tool detail lists every pending call and elapsed time.
@@ -113,15 +123,16 @@ A new sequence cancels the old sequence. Responsive SVG rebuild and session swit
 - A `tool-end` or `tool-error` event is the last observed stage, not a running stage: Tool uses a full-opacity static `DONE`/`FAILED` result highlight with no breathe or halo animation.
 - Agent Workflow MAY simultaneously highlight `Model · INFERRED NOW` after a tool result because it predicts the current processing stage, while Live Trace truthfully retains Tool as the last observed event.
 - Directional edge indicators represent observed stage handoffs.
+- `Expand` opens the same live topology in a larger overlay without changing observed state.
 ## 9. Responsive contract
 
 | Width | Layout |
 |---|---|
-| ≥1100px | Fixed one-screen app grid; three balanced 1fr panels (Agent Workflow, Live Trace, Tool Calls); four bottom panels |
-| 761–1099px | Stacked main panels (height 400px each); bottom two columns; status 4+3 |
+| ≥1100px | Three compact 300px panels in one row; four bottom panels |
+| 761–1099px | Stacked main panels (300px each); bottom two columns; status 4+3 |
 | ≤760px | Single-column stack; header without clock; status two columns; tool name column hidden |
 
-Desktop `.app` height is `100vh`. Mobile uses natural document scrolling.
+Desktop and mobile use natural document scrolling. Expanded diagrams remain viewport-contained.
 
 Agent Workflow changes topology below a measured container width of 520px, independent of the page media query.
 
@@ -168,12 +179,13 @@ At ≤760px, legend is hidden and the diagram has minimum width 720px inside `.g
 ## 12. Accessibility requirements
 
 - Interactive workflow nodes have `role=button`, `tabindex=0` and descriptive `aria-label`.
+- Preview headers expose keyboard-operable `Expand` buttons.
+- Expanded diagrams use `role=dialog`, `aria-modal=true`, labelled headings, inert background and focus return.
 - Pressed filters/tabs expose `aria-pressed`.
 - Active guide dot exposes `aria-current=step`.
-- Detail toggle exposes `aria-expanded` and `aria-controls`.
 - Guide root uses `role=dialog`, `aria-modal=true` and a labelled heading.
 - Focus-visible outline remains present in both themes.
-- Escape closes Guides; Left/Right advances steps.
+- Escape closes an expanded diagram or Guides; Left/Right advances guide steps.
 - Reduced motion disables all CSS animation/transition and guide autoplay.
 
 Known limitation: the guide dialog sets the background inert and focuses Close, but does not implement a full Tab focus trap.

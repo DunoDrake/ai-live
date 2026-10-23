@@ -8,6 +8,7 @@ AI Live reads local JSONL session files, derives bounded runtime state in memory
 
 - OMP and Claude Code transcript parsers
 - Live session status, model, context, usage, cost, and errors
+- Multi-provider quota row for Codex, Claude, Antigravity and OMP with truthful unavailable/stale states
 - Fixed Prompt → Tool ⇄ Todo → Reply trace with active/completed states
 - Tool lifecycle, durations, pending calls, and errors
 - Todo and plan progress
@@ -48,6 +49,8 @@ PORT=4874 node server.mjs
 AI Live is intentionally local-only and binds to `127.0.0.1`. Session transcripts can contain prompts, responses, file paths, tool arguments, and other sensitive data. Do not expose or proxy the service to a network without authentication and redaction.
 
 The browser receives parsed session data from the local server. No transcript data is sent to an external service by AI Live.
+
+Provider quota credentials are read only by the local server. The browser receives normalized percentages, reset times and availability—not access tokens, account identifiers or raw provider responses. Claude quota requires a valid existing OAuth access token; AI Live does not refresh credentials.
 
 ## Documentation
 

@@ -57,6 +57,16 @@ Display:
 - Tool error count.
 - Model name and thinking level when supplied.
 
+### 4.2.1 Provider quota
+
+- Display Codex, Claude, Antigravity and OMP in one compact provider row independent of the selected session.
+- Codex reads the newest bounded local `token_count.rate_limits` event.
+- Claude usage is requested server-side from the Anthropic OAuth usage endpoint.
+- Browser payloads MUST contain only normalized quota windows, reset times, freshness and availability; credentials and raw provider responses MUST NOT leave the server.
+- Missing, unsupported or rejected sources display `Unavailable`; the UI MUST NOT fabricate quota values.
+- Data older than 15 minutes displays `stale`.
+- Mobile uses internal horizontal scrolling without document overflow.
+
 ### 4.3 Agent workflow
 
 The surface contains five selectable stages:
@@ -67,7 +77,7 @@ The surface contains five selectable stages:
 - Verify
 - Output
 
-Each node MUST open a persistent detail panel. The collapsed panel MUST retain a summary. Nodes MUST be keyboard-operable.
+Each node MUST open the expanded workflow overlay with persistent stage detail. Nodes MUST be keyboard-operable; the dashboard preview MUST NOT reserve space for detail.
 
 Telemetry semantics are specified in [ui-state-spec.md](ui-state-spec.md). Context loading and Verify MUST NOT be presented as observed events.
 
@@ -82,19 +92,13 @@ Telemetry semantics are specified in [ui-state-spec.md](ui-state-spec.md). Conte
 
 ### 4.5 Live Trace
 
-- Provide a `Live trace` tab beside Tool Calls without increasing the desktop page height.
-- Show newest observed JSONL events first: session start/end, prompt, model/thinking changes, tool execution start/result, assistant reply, compaction and todo changes.
+- Render a compact fixed observed workflow graph (Prompt → Tool ⇄ Todo → Reply) beside Agent Workflow and Tool Calls.
 - Tool execution starts MUST come from `custom/tool_execution_start`, not from an assistant-proposed `toolCall`.
 - Pair tool start/result by `toolCallId`; show live elapsed duration while pending and final duration after result.
-- Every trace event is observed. The panel MUST explicitly state that Context assembly, reasoning and Verify are absent rather than inferred.
+- Every trace stage is observed. Context assembly, reasoning and Verify MUST remain absent rather than inferred.
 - Keep at most 80 trace events per cached session.
 - Switching sessions MUST replace the trace with the selected session's events.
-- Render the latest observed Prompt→Reply turn as a bounded flowchart beside Raw Timeline; stack them on narrower screens.
-- Use Start/End terminals for Prompt/Reply, process nodes for grouped tool lifecycles and dashed annotation nodes for metadata.
-- Wrap at three columns in a snake layout and cap at 12 flow nodes.
-- Collapse each tool lifecycle into one node keyed by `toolCallId`; attach Todo only by matching observed ID.
-- Follow observed event order and never invent dependency branches or unavailable internal stages.
-- Update pending duration in place while Raw Timeline retains all bounded evidence.
+- `Expand` MUST open the same current graph in a viewport-contained overlay without changing stage truth or runtime state.
 
 ### 4.6 Supporting panels
 
@@ -126,10 +130,10 @@ Requirements:
 
 - Use JetBrains Mono with system monospace fallbacks.
 - Support dark and light themes; persist theme in local storage.
-- Desktop ≥1200px: workflow/tool columns side by side and four bottom panels in one row.
-- Tablet: one main column and two-column bottom grid.
-- Mobile ≤760px: one-column document with no page-level horizontal overflow.
-- Process Guide diagrams MAY use an internal horizontal scroller on mobile; the document itself MUST remain viewport-width.
+- Desktop ≥1100px: three 300px main panels in one row and four bottom panels in one row.
+- Tablet: compact main panels stack; bottom uses two columns.
+- Mobile ≤760px: single-column document with no page-level horizontal overflow.
+- Expanded diagram and Process Guide overlays MUST remain viewport-contained.
 - Interactive focus MUST remain visible.
 - `prefers-reduced-motion: reduce` MUST disable animations and transitions.
 

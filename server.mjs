@@ -14,6 +14,14 @@ const SESSION_ROOTS = [
 	{ root: OMP_SESSIONS_ROOT, source: "omp" },
 	{ root: CLAUDE_CODE_SESSIONS_ROOT, source: "claude-code" },
 ];
+const CODEX_SESSION_ROOTS = [
+	path.join(os.homedir(), ".codex", "sessions"),
+	path.join(os.homedir(), "Library", "Application Support", "Orca", "codex-runtime-home", "home", "sessions"),
+];
+const CLAUDE_CREDENTIALS_FILE = process.env.CLAUDE_CREDENTIALS_FILE || path.join(os.homedir(), ".claude", ".credentials.json");
+const PROVIDER_CACHE_MS = 60000;
+const PROVIDER_STALE_MS = 15 * 60000;
+let providerCache = { at: 0, value: null, pending: null };
 const PORT = Number(process.env.PORT || 4873);
 const ACTIVE_WINDOW_MS = 25000;
 const EVENT_LIMIT = 60;
@@ -377,6 +385,84 @@ function snapshot(file, source) {
 	};
 }
 
+function quotaWindow(raw, fallbackMinutes) {
+	if (!raw || !Number.isFinite(raw.used_percent)) return null;
+	return {
+		usedPercent: Math.max(0, Math.min(100, raw.used_percent)),
+		remainingPercent: Math.max(0, Math.min(100, 100 - raw.used_percent)),
+		windowMinutes: Number.isFinite(raw.window_minutes) ? raw.window_minutes : fallbackMinutes,
+		resetsAt: Number.isFinite(raw.resets_at) ? raw.resets_at * 1000 : null,
+	};
+}
+
+function newestFiles(root, limit) {
+	const files = [];
+	function walk(dir, depth) {
+		if (depth > 4) return;
+		for (const name of safeReaddir(dir)) {
+			const file = path.join(dir, name);
+			let stat;
+			try { stat = fs.statSync(file); } catch { continue; }
+			if (stat.isDirectory()) walk(file, depth + 1);
+			else if (name.endsWith(".jsonl")) files.push({ file, mtime: stat.mtimeMs });
+		}
+	}
+	walk(root, 0);
+	return files.sort((left, right) => right.mtime - left.mtime).slice(0, limit);
+}
+
+function codexQuota() {
+	for (const root of CODEX_SESSION_ROOTS) {
+		for (const item of newestFiles(root, 12)) {
+			const lines = fs.readFileSync(item.file, "utf8").trim().split("\n").slice(-300).reverse();
+			for (const line of lines) {
+				let entry;
+				try { entry = JSON.parse(line); } catch { continue; }
+				const limits = entry.type === "event_msg" && entry.payload && entry.payload.type === "token_count" ? entry.payload.rate_limits : null;
+				if (!limits || (!limits.primary && !limits.secondary)) continue;
+				return { id:"codex", label:"Codex", status:"available", source:"local transcript", updatedAt:Date.parse(entry.timestamp) || item.mtime, session:quotaWindow(limits.primary, 300), weekly:quotaWindow(limits.secondary, 10080) };
+			}
+		}
+	}
+	return { id:"codex", label:"Codex", status:"unavailable", source:"local transcript", updatedAt:0, reason:"No rate-limit event found", session:null, weekly:null };
+}
+
+function claudeToken() {
+	try {
+		const credentials = JSON.parse(fs.readFileSync(CLAUDE_CREDENTIALS_FILE, "utf8"));
+		return credentials.claudeAiOauth && credentials.claudeAiOauth.accessToken || "";
+	} catch { return ""; }
+}
+
+function claudeWindow(raw, fallbackMinutes) {
+	if (!raw || !Number.isFinite(raw.utilization)) return null;
+	return { usedPercent:raw.utilization, remainingPercent:Math.max(0, 100 - raw.utilization), windowMinutes:fallbackMinutes, resetsAt:raw.resets_at ? Date.parse(raw.resets_at) : null };
+}
+
+async function claudeQuota() {
+	const token = claudeToken();
+	if (!token) return { id:"claude", label:"Claude", status:"unavailable", source:"Anthropic OAuth", updatedAt:0, reason:"Not signed in", session:null, weekly:null };
+	try {
+		const response = await fetch("https://api.anthropic.com/api/oauth/usage", { headers:{ authorization:"Bearer " + token, "anthropic-beta":"oauth-2025-04-20" }, signal:AbortSignal.timeout(8000) });
+		if (!response.ok) return { id:"claude", label:"Claude", status:"unavailable", source:"Anthropic OAuth", updatedAt:Date.now(), reason:"Usage API unavailable", session:null, weekly:null };
+		const usage = await response.json();
+		return { id:"claude", label:"Claude", status:"available", source:"Anthropic OAuth", updatedAt:Date.now(), session:claudeWindow(usage.five_hour, 300), weekly:claudeWindow(usage.seven_day, 10080) };
+	} catch { return { id:"claude", label:"Claude", status:"unavailable", source:"Anthropic OAuth", updatedAt:Date.now(), reason:"Usage request failed", session:null, weekly:null }; }
+}
+
+async function providerQuotas() {
+	if (providerCache.value && Date.now() - providerCache.at < PROVIDER_CACHE_MS) return providerCache.value;
+	if (providerCache.pending) return providerCache.pending;
+	providerCache.pending = Promise.all([Promise.resolve(codexQuota()), claudeQuota()]).then((providers) => {
+		providers.push({ id:"antigravity", label:"Antigravity", status:"unavailable", source:"local CLI", updatedAt:0, reason:"No readable quota source", session:null, weekly:null });
+		providers.push({ id:"omp", label:"OMP", status:"unavailable", source:"session JSONL", updatedAt:0, reason:"Provider quota not emitted", session:null, weekly:null });
+		for (const provider of providers) provider.stale = provider.updatedAt > 0 && Date.now() - provider.updatedAt > PROVIDER_STALE_MS;
+		providerCache = { at:Date.now(), value:{ now:Date.now(), providers }, pending:null };
+		return providerCache.value;
+	}).catch(() => ({ now:Date.now(), providers:[] }));
+	return providerCache.pending;
+}
+
 function sendJson(res, code, body) {
 	res.writeHead(code, { "content-type": "application/json", "cache-control": "no-store" });
 	res.end(JSON.stringify(body));
@@ -392,7 +478,8 @@ function resolveRequestedFile(requested) {
 	return null;
 }
 
-function handleApi(url, res) {
+async function handleApi(url, res) {
+	if (url.pathname === "/api/providers") return sendJson(res, 200, await providerQuotas());
 	if (url.pathname === "/api/sessions") {
 		const rows = listSessions().slice(0, 30).map((item) => {
 			const state = loadState(item.file, item.source);
@@ -408,7 +495,7 @@ function handleApi(url, res) {
 
 http.createServer((req, res) => {
 	const url = new URL(req.url, "http://localhost");
-	if (url.pathname.startsWith("/api/")) return handleApi(url, res);
+	if (url.pathname.startsWith("/api/")) return void handleApi(url, res);
 	res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
 	res.end(fs.readFileSync(path.join(HERE, "index.html")));
 }).listen(PORT, "127.0.0.1", () => console.log("AI Live viewer: http://127.0.0.1:" + PORT));
